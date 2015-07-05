@@ -7,6 +7,11 @@ export BUILDDIR=$BUILDTOP/$ARCH-$OS
 export TSTDIR=$BUILDTOP/$ARCH-$OS/tst
 export LCCDIR="$BUILDDIR/"
 
+echo BUILDDIR=$BUILDDIR > custom.mk
+echo LCCDIR=$LCCDIR >> custom.mk
+echo TSTDIR=$TSTDIR >> custom.mk
+echo HOSTFILE=etc/$OS.c >> custom.mk
+
 build_fatal_error() {
 	echo
 	echo
@@ -29,12 +34,12 @@ copy_file_and_create_link() {
 #	ln -sv /usr/lib/gcc/i686-linux-gnu/4.6 $BUILDDIR/gcc || \
 }
 
-if [ $# -ne 2 ] && [ $# -ne 1 ];then
-	echo "$0 {all,rcc,lburg,cpp,lcc,bprint,liblcc,triple,clean,clobber} [cleanbuild]"
+if [ $# -ne 0 ] && [ $# -ne 1 ];then
+	echo "$0 [clean]"
 	exit 1
 fi
 
-if [ $# -eq 2 ] && [ $2 = "cleanbuild" ];then
+if [ $# -eq 1 ] && [ $1 == "clean" ];then
 	rm -rf $BUILDTOP || build_fatal_error "[1]delete $BUILDTOP failed!"
 	mkdir -p $BUILDDIR || build_fatal_error "[2]create $BUILDDIR failed!"
 	mkdir -p $TSTDIR || build_fatal_error "[3]create $TSTDIR failed!"
@@ -57,11 +62,4 @@ else # argc == 1
 			copy_file_and_create_link
 		fi
 	fi
-fi
-
-
-if [ $1 = "triple" ];then
-	make HOSTFILE=etc/$OS.c all $1
-else
-	make HOSTFILE=etc/$OS.c $1
 fi

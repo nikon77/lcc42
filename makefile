@@ -1,5 +1,9 @@
 # $Id$
 
+# 附加上自定义的Makefile文件
+CUSTOM=custom.mk
+include $(CUSTOM)
+
 # 静态库的扩展名
 A=.a
 
@@ -40,9 +44,6 @@ DIFF=diff
 # 删除文件命令
 RM=rm -f
 
-# 附加上自定义的Makefile文件
-CUSTOM=custom.mk
-include $(CUSTOM)
 
 # 目标文件输出目录
 B=$(BUILDDIR)/
@@ -299,6 +300,7 @@ clean::		testclean
 		$(RM) $Bdagcheck.c $Balpha.c $Bmips.c $Bx86.c $Bsparc.c $Bx86linux.c
 		$(RM) $Brcc1$E $Brcc1$E $B1rcc$E $B2rcc$E
 		$(RM) $B*.ilk
+		./config_on_ubuntu15-amd64.sh clean
 
 clobber::	clean
 		$(RM) $Brcc$E $Blburg$E $Bcpp$E $Blcc$E $Bcp$E $Bbprint$E $B*$A
