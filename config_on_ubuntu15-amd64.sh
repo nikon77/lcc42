@@ -1,6 +1,7 @@
 #!/bin/bash
 # 此编译脚本使得lcc-4.2在ubuntu-15.04-desktop-amd64系统上编译成功
-export BUILDBIN=`pwd`/bin
+export CURRENTDIR=`pwd`
+export BUILDBIN=${CURRENTDIR}/bin
 export ARCH=x86 # 这里的架构不是指lcc自身程序ELF文件所在的架构,而是lcc编译器编译源码最终连接出的程序的架构
 export OS=ubuntu15-amd64
 export BUILDDIR=$BUILDBIN/$ARCH-$OS
@@ -31,7 +32,6 @@ copy_file_and_create_link() {
 	mkdir $BUILDDIR/include && \
 	cp -p -R include/$ARCH/linux/* $BUILDDIR/include/ || \
 	build_fatal_error "copy file and create link failed!"
-#	ln -sv /usr/lib/gcc/i686-linux-gnu/4.6 $BUILDDIR/gcc || \
 }
 
 if [ $# -ne 0 ] && [ $# -ne 1 ];then
@@ -58,7 +58,6 @@ else # argc == 1
 	else # $BUILDBIN exist and is a directory
 		if [ ! -e "$BUILDDIR/include" ];then
 			rm -rf $BUILDDIR/include || build_fatal_error "[9]delete $BUILDBIN/include failed"
-			rm $BUILDDIR/gcc || build_fatal_error "[10]delete link file \'gcc\' failed"
 			copy_file_and_create_link
 		fi
 	fi
