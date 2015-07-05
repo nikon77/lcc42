@@ -10,17 +10,17 @@ O=.o
 E=
 
 # 编译器
-CC=cc
+CC=gcc
 
 # 编译器的选项(当前只有调试选项)
 ifdef LCCDIR
-CFLAGS=-g -DLCCDIR=\"$(LCCDIR)\"
+CFLAGS=-g -DLCCDIR=\"$(LCCDIR)\" -m32
 else
-CFLAGS=-g
+CFLAGS=-g -m32
 endif
 
 # 链接器的选项(当前只有调试选项)
-LDFLAGS=-g
+LDFLAGS=-g -m32
 
 # 链接器
 LD=$(CC)
