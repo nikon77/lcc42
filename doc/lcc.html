@@ -1,0 +1,867 @@
+Content-type: text/html
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of LCC</TITLE>
+</HEAD><BODY>
+<H1>LCC</H1>
+Section: User Commands  (1)<BR>Updated: local - $Date$<BR><A HREF="#index">Index</A>
+<A HREF="/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+lcc - ANSI C compiler
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>lcc</B>
+
+[
+<I>option</I>
+
+|
+<I>file</I>
+
+]...
+<BR>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+
+<I>lcc</I>
+
+is an ANSI C compiler for a variety of platforms.
+<P>
+
+Arguments whose names end with `.c' (plus `.C' under Windows) are taken to be
+C source programs; they are preprocessed, compiled, and
+each object program is left on the file
+whose name is that of the source with `.o' (UNIX) or `.obj' (Windows)
+substituted for the extension.
+Arguments whose names end with `.i' are treated similarly,
+except they are not preprocessed.
+In the same way,
+arguments ending with `.s' (plus `.S', `.asm', and `.ASM', under Windows)
+are taken to be assembly source programs
+and are assembled, producing an object file.
+If there are no arguments,
+<I>lcc</I>
+
+summarizes its options on the standard error.
+<P>
+
+<I>lcc</I>
+
+deletes an object file if and only if exactly one
+source file is mentioned and no other file
+(source, object, library) or
+<B>-l</B>
+
+option is mentioned.
+<P>
+
+If the environment variable
+<B>LCCINPUTS</B>
+
+is set,
+<I>lcc</I>
+
+assumes it gives a semicolon- or colon-separated list of directories in which to
+look for source and object files whose names do not begin with `/'.
+These directories are also added to the list of directories
+searched for libraries.
+If
+<B>LCCINPUTS</B>
+
+is defined, it must contain `.' in order for the current directory
+to be searched for input files.
+<P>
+
+<I>lcc</I>
+
+uses ANSI standard header files (see `FILES' below).
+Include files not found in the ANSI header files
+are taken from the normal default include areas,
+which usually includes
+<B>/usr/include</B>.
+
+Under Windows, if the environment variable
+<B>include</B>
+
+is defined, it gives a semicolon-separated list of directories in which to search for
+header files.
+<P>
+
+<I>lcc</I>
+
+interprets the following options; unrecognized options are
+taken as loader options (see
+<I><A HREF="/cgi-bin/man/man2html?1+ld">ld</A></I>(1))
+
+unless
+<B>-c</B>,
+
+<B>-S</B>,
+
+or
+<B>-E</B>
+
+precedes them.
+Except for
+<B>-l</B>,
+
+all options are processed before any of the files
+and apply to all of the files.
+Applicable options are passed to each compilation phase in the order given.
+<DL COMPACT>
+<DT><B>-c</B>
+
+<DD>
+Suppress the loading phase of the compilation, and force
+an object file to be produced even if only one program is compiled.
+<DT><B>-g</B>
+
+<DD>
+Produce additional symbol table information for the local debuggers.
+<I>lcc</I>
+
+warns when
+<B>-g</B>
+
+is unsupported.
+<DT><B>-Wf-g</B><I>n</I><B>,</B><I>x</I>
+
+<DD>
+Set the debugging level to
+<I>n</I>
+
+and emit source code as comments into the generated assembly code;
+<I>x</I>
+
+must be the assembly language comment character.
+If
+<I>n</I>
+
+is omitted, it defaults to 1, which is similar to
+<B>-g</B>.
+
+Omitting
+<B>,</B><I>x</I>
+
+just sets the debugging level to
+<I>n</I>.
+
+<DT><B>-w</B>
+
+<DD>
+Suppress warning diagnostics, such as those
+announcing unreferenced statics, locals, and parameters.
+The line
+<I>#pragma ref id</I>
+
+simulates a reference to the variable 
+<I>id</I>.
+
+<DT><B>-d</B><I>n</I>
+
+<DD>
+Generate jump tables for switches whose density is at least
+<I>n</I>,
+
+a floating point constant between zero and one.
+The default is 0.5.
+<DT><B>-A</B>
+
+<DD>
+Warns about
+declarations and casts of function types without prototypes,
+assignments between pointers to ints and pointers to enums, and
+conversions from pointers to smaller integral types.
+A second
+<B>-A</B>
+
+warns about
+unrecognized control lines,
+nonANSI language extensions and source characters in literals,
+unreferenced variables and static functions,
+declaring arrays of incomplete types,
+and exceeding
+<I>some</I>
+
+ANSI environmental limits, like more than 257 cases in switches.
+It also arranges for duplicate global definitions in separately compiled
+files to cause loader errors.
+<DT><B>-P</B>
+
+<DD>
+Writes declarations for all defined globals on standard error.
+Function declarations include prototypes;
+editing this output can simplify conversion to ANSI C.
+This output may not correspond to the input when
+there are several typedefs for the same type.
+<DT><B>-n</B>
+
+<DD>
+Arrange for the compiler to produce code
+that tests for dereferencing zero pointers.
+The code reports the offending file and line number and calls
+<I><A HREF="/cgi-bin/man/man2html?3+abort">abort</A></I>(3).
+
+<DT><B>-O</B>
+
+<DD>
+is ignored.
+<DT><B>-S</B>
+
+<DD>
+Compile the named C programs, and leave the
+assembler-language output on corresponding files suffixed `.s' or `.asm'.
+<DT><B>-E</B>
+
+<DD>
+Run only the preprocessor on the named C programs
+and unsuffixed file arguments,
+and send the result to the standard output.
+<DT><B>-o</B><I>  output</I>
+
+<DD>
+Name the output file
+<I>output</I>.
+
+If
+<B>-c</B>
+
+or
+<B>-S</B>
+
+is specified and there is exactly one source file,
+this option names the object or assembly file, respectively.
+Otherwise, this option names the final executable
+file generated by the loader, and `a.out' (UNIX) or `a.exe' (Windows) is left undisturbed.
+<I>lcc</I>
+
+warns if
+<B>-o</B>
+
+and
+<B>-c</B>
+
+or
+<B>-S</B>
+
+are given with more than one source file and ignores the
+<B>-o</B>
+
+option.
+<DT><B>-D</B><I>name=def</I>
+
+<DD>
+Define the
+<I>name</I>
+
+to the preprocessor, as if by `#define'.
+If
+<I>=def</I>
+
+is omitted, the name is defined as &quot;1&quot;.
+<DT><B>-U</B><I>name</I>
+
+<DD>
+Remove any initial definition of
+<I>name</I>.
+
+<DT><B>-I</B><I>dir</I>
+
+<DD>
+`#include' files
+whose names do not begin with `/' are always
+sought first in the directory of the
+<I>file</I>
+
+arguments, then in directories named in
+<B>-I</B>
+
+options, then in directories on a standard list.
+<DT><B>-N</B>
+
+<DD>
+Do not search
+<I>any</I>
+
+of the standard directories for `#include' files.
+Only those directories specified by subsequent explicit
+<B>-I</B>
+
+options will be searched, in the order given.
+<DT><B>-B</B><I>str</I>
+
+<DD>
+Use the compiler
+<B></B><I>str</I><B>rcc</B>
+
+instead of the default version.
+Note that
+<I>str</I>
+
+often requires a trailing slash.
+On Sparcs only,
+<B>-Bstatic</B>
+
+and
+<B>-Bdynamic</B>
+
+are passed to the loader; see
+<I><A HREF="/cgi-bin/man/man2html?1+ld">ld</A></I>(1).
+
+<DT><B>-Wo-lccdir=</B><I>dir</I>
+
+<DD>
+Find the preprocessor, compiler proper, and include directory
+in the directory
+<I>dir/</I>
+
+or
+<I>dir\.</I>
+
+If the environment variable
+<B>LCCDIR</B>
+
+is defined, it gives this directory.
+<I>lcc</I>
+
+warns when this option is unsupported.
+<DT><B>-Wf-unsigned_char=1</B>
+
+<DD>
+<BR>
+
+
+<DT><B>-Wf-unsigned_char=0 </B>
+
+<DD>
+makes plain
+<B>char</B>
+
+an unsigned (1) or signed (0) type; by default,
+<B>char</B>
+
+is signed.
+<DT><B>-Wf-wchar_t=unsigned_char</B>
+
+<DD>
+<BR>
+
+
+<DT><B>-Wf-wchar_t=unsigned_short</B>
+
+<DD>
+<BR>
+
+
+<DT><B>-Wf-wchar_t=unsigned_int</B>
+
+<DD>
+Makes wide characters the type indicated; by default,
+wide characters are unsigned short ints, and
+<B>wchar_t</B>
+
+is a typedef for unsigned short defined in stddef.h.
+The definition for
+<B>wchar_t</B>
+
+in stddef.h must correspond to the type specified.
+<DT><B>-v</B>
+
+<DD>
+Print commands as they are executed; some of the executed
+programs are directed to print their version numbers.
+More than one occurrence of
+<B>-v</B>
+
+causes the commands to be printed, but
+<I>not</I>
+
+executed.
+<DT><B>-help</B> or <B>-?</B>
+
+<DD>
+Print a message on the standard error summarizing
+<I>lcc</I>'s
+
+options and giving the values of the environment variables
+<B>LCCINPUTS</B>
+
+and
+<B>LCCDIR</B>,
+
+if they are defined.
+Under Windows, the values of
+<B>include</B>
+
+and
+<B>lib</B>
+
+are also given, if they are defined.
+<DT><B>-b</B>
+
+<DD>
+Produce code that counts the number of times each expression is executed.
+If loading takes place, arrange for a
+<B>prof.out</B>
+
+file to be written when the object program terminates.
+A listing annotated with execution counts can then be generated with
+<I><A HREF="/cgi-bin/man/man2html?1+bprint">bprint</A></I>(1).
+
+<I>lcc</I>
+
+warns when
+<B>-b</B>
+
+is unsupported.
+<B>-Wf-C</B>
+
+is similar, but counts only the number of function calls.
+<DT><B>-p</B>
+
+<DD>
+Produce code that counts the number of times each function is called.
+If loading takes place, replace the standard startup
+function by one that automatically calls
+<I><A HREF="/cgi-bin/man/man2html?3+monitor">monitor</A></I>(3)
+
+at the start and arranges to write a
+<B>mon.out</B>
+
+file when the object program terminates normally.
+An execution profile can then be generated with
+<I><A HREF="/cgi-bin/man/man2html?1+prof">prof</A></I>(1).
+
+<I>lcc</I>
+
+warns when
+<B>-p</B>
+
+is unsupported.
+<DT><B>-pg</B>
+
+<DD>
+Causes the compiler to produce counting code like
+<B>-p</B>,
+
+but invokes a run-time recording mechanism that keeps more
+extensive statistics and produces a 
+<B>gmon.out</B>
+
+file at normal termination.
+Also, a profiling library is searched, in lieu of the standard C library.
+An execution profile can then be generated with
+<I><A HREF="/cgi-bin/man/man2html?1+gprof">gprof</A></I>(1).
+
+<I>lcc</I>
+
+warns when
+<B>-pg</B>
+
+is unsupported.
+<DT><B>-t</B><I>name</I>
+
+<DD>
+<BR>
+
+
+<DT><B>-t</B>
+
+<DD>
+Produce code to print the name of the function, an activation number,
+and the name and value of each argument at function entry.
+At function exit, produce code to print
+the name of the function, the activation number, and the return value.
+By default,
+<I>printf</I>
+
+does the printing; if
+<I>name</I>
+
+appears, it does.
+For null
+<I>char*</I>
+
+values, &quot;(null)&quot; is printed. 
+<B>-target</B>
+
+<I>name</I>
+
+is accepted, but ignored.
+<DT><B>-tempdir=</B><I>dir</I>
+
+<DD>
+Store temporary files in the directory
+<I>dir/</I>
+
+or
+<I>dir\.</I>
+
+The default is usually
+<B>/tmp</B>.
+
+<DT><B>-W</B><I>xarg</I>
+
+<DD>
+pass argument
+<I>arg</I>
+
+to the program indicated by
+<I>x</I>;
+
+<I>x</I>
+
+can be one of
+<B>p</B>,
+
+<B>f</B>,
+
+<B>a</B>,
+
+or
+<B>l</B>,
+
+which refer, respectively, to the preprocessor, the compiler proper,
+the assembler, and the loader.
+<I>arg</I>
+
+is passed as given; if a
+<B>-</B>
+
+is expected, it must be given explicitly.
+<B>-Wo</B><I>arg</I>
+
+specifies a system-specific option,
+<I>arg</I>.
+
+</DL>
+<P>
+
+Other arguments
+are taken to be either loader option arguments, or C-compatible
+object programs, typically produced by an earlier
+<I>lcc</I>
+
+run, or perhaps libraries of C-compatible routines.
+Duplicate object files are ignored.
+These programs, together with the results of any
+compilations specified, are loaded (in the order
+given) to produce an executable program with name
+<B>a.out</B>
+
+(UNIX) or
+<B>a.exe</B>
+
+(Windows).
+<P>
+
+<I>lcc</I>
+
+assigns the most frequently referenced scalar parameters and
+locals to registers whenever possible.
+For each block,
+explicit register declarations are obeyed first;
+remaining registers are assigned to automatic locals if they
+are `referenced' at least 3 times.
+Each top-level occurrence of an identifier
+counts as 1 reference. Occurrences in a loop,
+either of the then/else arms of an if statement, or a case
+in a switch statement each count, respectively, as 10, 1/2, or 1/10 references.
+These values are adjusted accordingly for nested control structures.
+<B>-Wf-a</B>
+
+causes
+<I>lcc</I>
+
+to read a
+<B>prof.out</B>
+
+file from a previous execution and to use the data therein
+to compute reference counts (see
+<B>-b</B>).
+
+<P>
+
+<I>lcc</I>
+
+is a cross compiler;
+<B>-Wf-target=</B><I>target/os</I>
+
+causes
+<I>lcc</I>
+
+to generate code for
+<I>target</I>
+
+running the operating system denoted by
+<I>os</I>.
+
+The supported
+<I>target/os</I>
+
+combinations may include
+<P>
+
+<DL COMPACT><DT><DD>
+
+
+<PRE>
+alpha/osf      ALPHA, OSF 3.2
+mips/irix      big-endian MIPS, IRIX 5.2
+mips/ultrix    little-endian MIPS, ULTRIX 4.3
+sparc/solaris  SPARC, Solaris 2.3
+x86/win32      x86, Windows NT 4.0/Windows 95/98
+x86/linux      x86, Linux
+symbolic       text rendition of the generated code
+null           no output
+</PRE>
+
+</DL>
+
+<P>
+
+For
+<B>-Wf-target=symbolic</B>,
+
+the option
+<B>-Wf-html</B>
+
+causes the text rendition to be emitted as HTML.
+<B></B><A NAME="lbAE">&nbsp;</A>
+<H2>LIMITATIONS</H2>
+
+
+
+<P>
+
+<I>lcc</I>
+
+accepts the C programming language
+as described in the ANSI standard.
+If
+<I>lcc</I>
+
+is used with the GNU C preprocessor, the
+<B>-Wp-trigraphs</B>
+
+option is required to enable trigraph sequences.
+<P>
+
+Plain int bit fields are signed.
+Bit fields are aligned like unsigned integers but are otherwise laid out
+as by most standard C compilers.
+Some compilers, such as the GNU C compiler,
+may choose other, incompatible layouts.
+<P>
+
+Likewise, calling conventions are intended to be compatible with
+the host C compiler,
+except possibly for passing and returning structures.
+Specifically,
+<I>lcc</I>
+
+passes and returns structures like host ANSI C compilers
+on most targets, but some older host C compilers use different conventions.
+Consequently, calls to/from such functions compiled with
+older C compilers may not work.
+Calling a function that returns
+a structure without declaring it as such violates
+the ANSI standard and may cause a fault.
+<A NAME="lbAF">&nbsp;</A>
+<H2>FILES</H2>
+
+<P>
+
+The file names listed below are
+<I>typical</I>,
+
+but vary among installations; installation-dependent variants
+can be displayed by running
+<I>lcc</I>
+
+with the
+<B>-v</B>
+
+option.
+<P>
+
+<DL COMPACT><DT><DD>
+
+
+<PRE>
+file.{c,C}              input file
+file.{s,asm}            assembly-language file
+file.{o,obj}            object file
+a.{out,exe}             loaded output
+/tmp/lcc*               temporary files
+$LCCDIR/cpp             preprocessor
+$LCCDIR/rcc             compiler
+$LCCDIR/liblcc.{a,lib}  <I>lcc</I>-specific library
+/lib/crt0.o             runtime startup (UNIX)
+/lib/[gm]crt0.o         startups for profiling (UNIX)
+/lib/libc.a             standard library (UNIX)
+$LCCDIR/include         ANSI standard headers
+/usr/local/include      local headers
+/usr/include            traditional headers
+prof.out                file produced for <I><A HREF="/cgi-bin/man/man2html?1+bprint">bprint</A></I>(1)
+mon.out                 file produced for <I><A HREF="/cgi-bin/man/man2html?1+prof">prof</A></I>(1)
+gmon.out                file produced for <I><A HREF="/cgi-bin/man/man2html?1+gprof">gprof</A></I>(1)
+</PRE>
+
+</DL>
+
+<P>
+
+<I>lcc</I>
+
+predefines the macro
+<B>__LCC__</B>
+
+on all systems.
+It may also predefine some installation-dependent symbols; option
+<B>-v</B>
+
+exposes them.
+<A NAME="lbAG">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<P>
+
+C. W. Fraser and D. R. Hanson,
+<I>A Retargetable C Compiler: Design and Implementation,</I>
+
+Addison-Wesley, 1995. ISBN 0-8053-1670-1.
+<P>
+
+The World-Wide Web page at <A HREF="http://www.cs.princeton.edu/software/lcc/.">http://www.cs.princeton.edu/software/lcc/.</A>
+<P>
+
+S. P. Harbison and G. L. Steele, Jr.,
+<I>C: A Reference Manual,</I>
+
+4th ed., Prentice-Hall, 1995.
+<P>
+
+B. W. Kernighan and D. M. Ritchie,
+<I>The C Programming Language,</I>
+
+2nd ed., Prentice-Hall, 1988.
+<P>
+
+American National Standards Inst.,
+<I>American National Standard for Information Systems---Programming</I>
+
+<I>Language---C</I>,
+
+ANSI X3.159-1989, New York, 1990.
+<BR>
+
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+Mail bug reports along with the shortest preprocessed program
+that exposes them and the details reported by
+<I>lcc</I>'s
+
+<B>-v</B>
+
+option to <A HREF="mailto:lcc-bugs@princeton.edu">lcc-bugs@princeton.edu</A>. The WWW page at
+URL <A HREF="http://www.cs.princeton.edu/software/lcc/">http://www.cs.princeton.edu/software/lcc/</A>
+includes detailed instructions for reporting bugs.
+<P>
+
+The ANSI standard headers conform to the specifications in
+the Standard, which may be too restrictive for some applications,
+but necessary for portability.
+Functions given in the ANSI headers may be missing from
+some local C libraries (e.g., wide-character functions)
+or may not correspond exactly to the local versions;
+for example, the ANSI standard
+stdio.h
+specifies that
+<I>printf</I>,
+
+<I>fprintf</I>,
+
+and
+<I>sprintf</I>
+
+return the number of characters written to the file or array,
+but some existing libraries don't implement this convention.
+<P>
+
+On the MIPS and SPARC, old-style variadic functions must use
+varargs.h
+from MIPS or Sun. New-style is recommended.
+<P>
+
+With
+<B>-b</B>,
+
+files compiled
+<I>without</I>
+
+<B>-b</B>
+
+may cause
+<I>bprint</I>
+
+to print erroneous call graphs.
+For example, if
+<B>f</B>
+
+calls
+<B>g</B>
+
+calls
+<B>h</B>
+
+and
+<B>f</B>
+
+and
+<B>h</B>
+
+are compiled with
+<B>-b</B>,
+
+but
+<B>g</B>
+
+is not,
+<B>bprint</B>
+
+will report that
+<B>f</B>
+
+called
+<B>h</B>.
+
+The total number of calls is correct, however.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">LIMITATIONS</A><DD>
+<DT><A HREF="#lbAF">FILES</A><DD>
+<DT><A HREF="#lbAG">SEE ALSO</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 18:47:29 GMT, June 28, 2015
+</BODY>
+</HTML>

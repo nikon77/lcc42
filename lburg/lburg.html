@@ -1,0 +1,254 @@
+Content-type: text/html
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of LBURG</TITLE>
+</HEAD><BODY>
+<H1>LBURG</H1>
+Section: User Commands  (1)<BR>Updated: local - 11/30/94<BR><A HREF="#index">Index</A>
+<A HREF="/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+lburg - lcc's code-generator generator
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>lburg</B>
+
+[
+<I>option</I>
+
+]...
+[ [
+<I>input</I>
+
+]
+<I>output</I>
+
+]
+<BR>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+
+<I>lburg</I>
+
+reads an lcc-style BURG specification from
+<I>input</I>
+
+and writes a pattern-matching code generator to
+<I>output</I>.
+
+If
+<I>input</I>
+
+is `-' or is omitted,
+<I>lburg</I>
+
+reads the standard input;
+If
+<I>output</I>
+
+is `-' or is omitted,
+<I>lburg</I>
+
+writes to the standard output.
+<P>
+
+<I>lburg</I>
+
+accepts specifications that conform to the following EBNF grammar.
+Terminals are enclosed in single quotes or are
+given in uppercase, all other symbols are nonterminals or English phrases,
+{X} denotes zero or more instances of X, and [X] denotes an optional X.
+<P>
+
+<PRE>
+<DL COMPACT><DT><DD>spec:     `%{' configuration `%}' { dcl } `%%' { rule }
+               [ `%%' C code ]
+
+dcl:      `%start' nonterm
+          `%term' { ID `=' INT }
+
+rule:     nonterm `:' tree template [ C expression ]
+
+tree:     term `(' tree `,' tree `)'
+          term `(' tree `)'
+          term
+          nonterm
+
+nonterm:  ID
+
+template: `&quot;' { any character except double quote } `&quot;'
+</DL>
+</PRE>
+
+<P>
+
+Specifications are structurally similar to
+<I>yacc</I>'s.
+
+Text between
+`<TT>%{</TT>'
+and
+`<TT>%}</TT>'
+is called the configuration section; there may be several such segments.
+All are concatenated and copied verbatim into the head of the output.
+Text after the second
+`<TT>%%</TT>',
+if any, is also copied verbatim into the output, at the end.
+<P>
+
+Specifications consist of declarations, a
+`<TT>%%</TT>'
+separator, and rules.
+Input is line-oriented; each declaration and rule must appear on a separate line,
+and declarations must begin in column 1.
+Declarations declare terminals --- the operators in subject
+trees --- and associate a unique, positive external symbol
+number with each one.
+Nonterminals are declared by their presence
+on the left side of rules.  The
+<TT>%start</TT>
+declaration optionally declares a nonterminal as the start symbol.
+In the grammar above,
+<TT>term</TT>
+and
+<TT>nonterm</TT>
+denote identifiers that are terminals and nonterminals.
+<P>
+
+Rules define tree patterns in a fully parenthesized prefix
+form. Every nonterminal denotes a tree.
+Each operator has a fixed
+arity, which is inferred from the rules in which it is used.
+A chain rule is a rule whose pattern is another nonterminal.
+If no start symbol is declared, the nonterminal defined by the first rule is used.
+<P>
+
+Each rule ends with an expression that computes the cost of matching
+that rule; omitted costs
+default to zero. Costs of chain rules must be constants.
+<P>
+
+The configuration section configures the output
+for the trees being parsed and the client's environment.
+As shown, this section must define
+<TT>NODEPTR_TYPE</TT>
+to be a visible typedef symbol for a pointer to a
+node in the subject tree.
+The labeller invokes
+<TT>OP_LABEL(p)</TT>,
+<TT>LEFT_CHILD(p)</TT>, and
+<TT>RIGHT_CHILD(p)</TT>
+to read the operator and children from the node pointed to by <TT>p</TT>.
+If the configuration section defines these operations as macros, they are implemented in-line;
+otherwise, they must be implemented as functions.
+<P>
+
+The matcher
+computes and stores a single integral state in each node of the subject tree.
+The configuration section must define a macro
+<TT>STATE_LABEL(p)</TT>
+to access the state field of the node pointed to
+by <TT>p</TT>. It must be large enough to hold a pointer, and
+a macro is required because it is used as an lvalue.
+<P>
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+<DL COMPACT>
+<DT><B>-p</B><I>&nbsp;prefix</I>
+
+<DD>
+<BR>
+
+
+<DT><B>-p</B><I>prefix</I>
+
+<DD>
+Use
+<I>prefix</I>
+
+as the disambiquating prefix for visible names and fields.
+The default is `<TT>_</TT>'.
+<DT><B>-T</B>
+
+<DD>
+Arrange for
+<P>
+<PRE>
+    void _trace(NODEPTR_TYPE p, int eruleno,
+                    int cost, int bestcost);
+
+</PRE>
+
+
+to be called at each successful match.
+<TT>p</TT>
+identifies the node and
+<TT>eruleno</TT>
+identifies the matching rule; the rules are numbered
+beginning at 1 in the order they appear in the input.
+<TT>cost</TT>
+is the cost of the match and
+<TT>bestcost</TT>
+is the cost of the best previous match. The current match
+wins only if
+<TT>cost</TT>
+is less than <TT>bestcost</TT>.
+32767 represents the infinite cost of no previous match.
+<TT>_trace</TT> must be declared in the configuration section.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<I><A HREF="/cgi-bin/man/man2html?1+lcc">lcc</A></I>(1)
+
+<P>
+
+C. W. Fraser and D. R. Hanson,
+<I>A</I>Retargetable<I>C</I>Compiler:<I>Design</I>and<I>Implementation</I>,
+
+Benjamin/Cummings, Redwood City, CA, 1995,
+ISBN 0-8053-1670-1. Chapter 14.
+<P>
+
+C. W. Fraser, D. R. Hanson and T. A. Proebsting,
+`Engineering a simple, efficient code generator generator,'
+<I>ACM Letters on Programming Languages and Systems</I>
+
+<B>1</B>,
+
+3 (Sep. 1992), 213-226.
+<BR>
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>BUGS</H2>
+
+Mail bug reports along with the shortest input
+that exposes them to <A HREF="mailto:drh@cs.princeton.edu">drh@cs.princeton.edu</A>.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 00:52:21 GMT, June 29, 2015
+</BODY>
+</HTML>
