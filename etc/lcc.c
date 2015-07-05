@@ -720,14 +720,14 @@ xx(unsigned_int,4)
 			return;
 		case 'N': /* -N Do not search any of the standard directories for `#include' files.
 		Only those directories specified by subsequent explicit -I options will be searched, in the order given. */
-			if (strcmp(basepath(cpp[0]), "cpp") == 0) /* TODO: 对于ubuntu系统来说这里cpp0应该改为cpp */
-				plist = append("-nostdinc", plist);
+			if (strcmp(basepath(cpp[0]), "lcpp") == 0)
+				plist = append("-N", plist);
 			include[0] = 0;
 			ilist = 0;
 			return;
 		case 'v': /* verbose */
 			if (verbose++ == 0) {
-				if (strcmp(basepath(cpp[0]), "cpp") == 0) /* TODO: 对于ubuntu系统来说这里cpp0应该改为cpp */
+				if (strcmp(basepath(cpp[0]), "lcpp") == 0)
 					plist = append(arg, plist);
 				clist = append(arg, clist);
 				fprintf(stderr, "%s: %s\n",progname, version);

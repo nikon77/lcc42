@@ -27,11 +27,11 @@ char inputs[256] = "";
  * $2将被替换成输入文件;
  * $3将被替换成输出文件.
  */
-char *cpp[] = { "/usr/bin/cpp",
+char *cpp[] = { LCCDIR "/lcpp",
 	"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
 	"-Dunix", "-Di386", "-Dlinux",
 	"-D__unix__", "-D__i386__", "-D__linux__", "-D__signed__=signed",
-	"-imultilib 32","-m32","-mtune=generic","-march=i686",
+	//"-imultilib 32","-m32","-mtune=generic","-march=i686",
 	"$1", "$2", "$3", 0 };
 
 /*
