@@ -2,7 +2,7 @@
 
 # 附加上自定义的Makefile文件
 CUSTOM=custom.mk
-include $(CUSTOM)
+-include $(CUSTOM)
 
 # 静态库的扩展名
 A=.a

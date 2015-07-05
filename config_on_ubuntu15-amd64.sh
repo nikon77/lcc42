@@ -1,10 +1,10 @@
 #!/bin/bash
 # 此编译脚本使得lcc-4.2在ubuntu-15.04-desktop-amd64系统上编译成功
-export BUILDTOP=~/lcc42/lcc42-build
+export BUILDBIN=`pwd`/bin
 export ARCH=x86 # 这里的架构不是指lcc自身程序ELF文件所在的架构,而是lcc编译器编译源码最终连接出的程序的架构
 export OS=ubuntu15-amd64
-export BUILDDIR=$BUILDTOP/$ARCH-$OS
-export TSTDIR=$BUILDTOP/$ARCH-$OS/tst
+export BUILDDIR=$BUILDBIN/$ARCH-$OS
+export TSTDIR=$BUILDBIN/$ARCH-$OS/tst
 export LCCDIR="$BUILDDIR/"
 
 echo BUILDDIR=$BUILDDIR > custom.mk
@@ -40,24 +40,24 @@ if [ $# -ne 0 ] && [ $# -ne 1 ];then
 fi
 
 if [ $# -eq 1 ] && [ $1 == "clean" ];then
-	rm -rf $BUILDTOP || build_fatal_error "[1]delete $BUILDTOP failed!"
+	rm -rf $BUILDBIN || build_fatal_error "[1]delete $BUILDBIN failed!"
 	mkdir -p $BUILDDIR || build_fatal_error "[2]create $BUILDDIR failed!"
 	mkdir -p $TSTDIR || build_fatal_error "[3]create $TSTDIR failed!"
 	copy_file_and_create_link
 else # argc == 1
-	# if the file $BUILDTOP exist but is not a directory
-	if [ -e $BUILDTOP ] && [ ! -d $BUILDTOP ];then
-		rm -rf $BUILDTOP || build_fatal_error "[4]delete $BUILDTOP failed!"
+	# if the file $BUILDBIN exist but is not a directory
+	if [ -e $BUILDBIN ] && [ ! -d $BUILDBIN ];then
+		rm -rf $BUILDBIN || build_fatal_error "[4]delete $BUILDBIN failed!"
 		mkdir -p $BUILDDIR || build_fatal_error "[5]create $BUILDDIR failed!"
 		mkdir -p $TSTDIR || build_fatal_error "[6]create $TSTDIR failed!"
 		copy_file_and_create_link
-	elif [ ! -e $BUILDTOP ];then  # $BUILDTOP do not exist 
+	elif [ ! -e $BUILDBIN ];then  # $BUILDBIN do not exist 
 		mkdir -p $BUILDDIR || build_fatal_error "[7]create $BUILDDIR failed!"
 		mkdir -p $TSTDIR || build_fatal_error "[8]create $TSTDIR failed!"
 		copy_file_and_create_link
-	else # $BUILDTOP exist and is a directory
+	else # $BUILDBIN exist and is a directory
 		if [ ! -e "$BUILDDIR/include" ];then
-			rm -rf $BUILDDIR/include || build_fatal_error "[9]delete $BUILDTOP/include failed"
+			rm -rf $BUILDDIR/include || build_fatal_error "[9]delete $BUILDBIN/include failed"
 			rm $BUILDDIR/gcc || build_fatal_error "[10]delete link file \'gcc\' failed"
 			copy_file_and_create_link
 		fi
