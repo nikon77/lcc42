@@ -24,9 +24,9 @@ char inputs[256] = "";
  * 这个cpp数组指明了lcc所需的预处理器的路径和参数. 例如: "-D__STRICT_ANSI__"参数将被传递给cpp程序.
  * 这些参数中有一些模板.其中:
  * $1将被替换成用户在命令行上所指定的选项,对于预处理器,这个列表中始终包含 -D__LCC__ 选项;
- * $2将被替换成输入文件; $3将被替换成输出文件.
+ * $2将被替换成输入文件;
+ * $3将被替换成输出文件.
  */
-//   /usr/bin/cpp -U__GNUC__ -D_POSIX_SOURCE -D__STRICT_ANSI__ -Dunix -Di386 -Dlinux -D__unix__ -D__i386__ -D__linux__ -D__signed__=signed -v -P -imultilib 32 -m32 -mtune=generic -march=i686 hello.c hello.i
 char *cpp[] = { "/usr/bin/cpp",
 	"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
 	"-Dunix", "-Di386", "-Dlinux",
@@ -41,12 +41,6 @@ char *cpp[] = { "/usr/bin/cpp",
  * as described in UNIX or Windows installation instructions. The driver adds these options
  * to cpp's arguments when it invokes the preprocessor, except when -N is specified.
  */
-// /usr/lib/gcc/x86_64-linux-gnu/4.9/include
-//  /usr/lib/gcc/x86_64-linux-gnu/4.9/include
-// /usr/local/include
-//  /usr/lib/gcc/x86_64-linux-gnu/4.9/include-fixed
-
-//  /usr/include
 
 char *include[] = {"-I" LCCDIR "include",
 "-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include" ,
