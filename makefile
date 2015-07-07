@@ -65,7 +65,7 @@ what:
 # liblcc: lcc library
 all::	config rcc lburg lcpp lcc bprint liblcc
 
-config:
+config::
 	./config_on_ubuntu15-amd64.sh
 # rcc程序是真正的C Compiler,即(Real C Compiler)
 # 它的依赖文件: 

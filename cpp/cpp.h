@@ -1,13 +1,15 @@
-/* $Id$ */
 #include <stdio.h>
-#define	INS	32768		/* input buffer */
-#define	OBS	4096		/* outbut buffer */
-#define	NARG	32		/* Max number arguments to a macro */
-#define	NINCLUDE 32		/* Max number of include directories (-I) */
-#define	NIF	32		/* depth of nesting of #if */
+
+#define		INS			32768		/* 输入缓冲大小（Input Buffer Size） */
+#define		OBS			4096		/* 输出缓冲大小（Output Buffer Size） */
+#define		NARG		32			/* 一个宏的最大参数个数 */
+#define		NINCLUDE	32			/* 包含目录的最大个数(即命令行上-I选项的最大个数) */
+#define		NIF			32			/* #if条件编译的最大陷入(nesting)深度 */
+
 #ifndef EOF
 #define	EOF	(-1)
 #endif
+
 #ifndef NULL
 #define NULL	0
 #endif
@@ -16,45 +18,126 @@
 typedef unsigned char uchar;
 #endif
 
-enum toktype { END, UNCLASS, NAME, NUMBER, STRING, CCON, NL, WS, DSHARP,
-		EQ, NEQ, LEQ, GEQ, LSH, RSH, LAND, LOR, PPLUS, MMINUS,
-		ARROW, SBRA, SKET, LP, RP, DOT, AND, STAR, PLUS, MINUS,
-		TILDE, NOT, SLASH, PCT, LT, GT, CIRC, OR, QUEST,
-		COLON, ASGN, COMMA, SHARP, SEMIC, CBRA, CKET,
-		ASPLUS, ASMINUS, ASSTAR, ASSLASH, ASPCT, ASCIRC, ASLSH,
-		ASRSH, ASOR, ASAND, ELLIPS,
-		DSHARP1, NAME1, DEFINED, UMINUS };
-
-enum kwtype { KIF, KIFDEF, KIFNDEF, KELIF, KELSE, KENDIF, KINCLUDE, KDEFINE,
-		KUNDEF, KLINE, KERROR, KPRAGMA, KDEFINED,
-		KLINENO, KFILE, KDATE, KTIME, KSTDC, KEVAL };
-
-#define	ISDEFINED	01	/* has #defined value */
-#define	ISKW		02	/* is PP keyword */
-#define	ISUNCHANGE	04	/* can't be #defined in PP */
-#define	ISMAC		010	/* builtin macro, e.g. __LINE__ */
-
-#define	EOB	0xFE		/* sentinel for end of input buffer */
-#define	EOFC	0xFD		/* sentinel for end of input file */
-#define	XPWS	1		/* token flag: white space to assure token sep. */
+/**
+ * 一共60个token类型
+ */
+enum toktype {
+	END,
+	UNCLASS,
+	NAME,
+	NUMBER,
+	STRING,
+	CCON,
+	NL,
+	WS,
+	DSHARP,
+	EQ,
+	NEQ,
+	LEQ,
+	GEQ,
+	LSH,
+	RSH,
+	LAND,
+	LOR,
+	PPLUS,
+	MMINUS,
+	ARROW,
+	SBRA,
+	SKET,
+	LP,
+	RP,
+	DOT,
+	AND,
+	STAR,
+	PLUS,
+	MINUS,
+	TILDE,
+	NOT,
+	SLASH,
+	PCT,
+	LT,
+	GT,
+	CIRC,
+	OR,
+	QUEST,
+	COLON,
+	ASGN,
+	COMMA,
+	SHARP,
+	SEMIC,
+	CBRA,
+	CKET,
+	ASPLUS,
+	ASMINUS,
+	ASSTAR,
+	ASSLASH,
+	ASPCT,
+	ASCIRC,
+	ASLSH,
+	ASRSH,
+	ASOR,
+	ASAND,
+	ELLIPS,
+	DSHARP1,
+	NAME1,
+	DEFINED,
+	UMINUS
+};
 
 /**
- * 描述一个token的结构
+ * 一共19个关键字
+ */
+enum kwtype {
+	KIF,		/* #if */
+	KIFDEF,		/* #ifdef */
+	KIFNDEF,	/* #ifndef */
+	KELIF,		/* #elif */
+	KELSE,		/* #else */
+	KENDIF,		/* #endif */
+	KINCLUDE,	/* #include */
+	KDEFINE,	/* #define */
+	KUNDEF,		/* #undef */
+	KLINE,		/* #line关键字(影响__LINE__的值)*/
+	KERROR,		/* #error */
+	KPRAGMA,	/* #pragma */
+	KDEFINED,	/* defined 用法: #if defined FOO */
+	KLINENO,	/* __LINE__ */
+	KFILE,		/* __FILE__ */
+	KDATE,		/* __DATE__ */
+	KTIME,		/* __TIME__ */
+	KSTDC,		/* __STDC__ */
+	KEVAL		/* #eval */
+};
+
+#define		ISDEFINED	01	/* has #defined value */
+#define		ISKW		02	/* is PP keyword */
+#define		ISUNCHANGE	04	/* can't be #defined in PP */
+#define		ISMAC		010	/* builtin macro, e.g. __LINE__ */
+
+#define		EOB		0xFE		/* sentinel(哨兵) for end of input buffer */
+#define		EOFC	0xFD		/* sentinel(哨兵) for end of input file */
+#define		XPWS	1			/* token flag: white space to assure token sep. */
+
+/**
+ * 描述一个token
  */
 typedef struct token {
-	unsigned char	type;		/* token的类型 */
+	unsigned char	type;		/* token的类型,在枚举常量toktype里取值 */
 	unsigned char 	flag;		/* token的flag */
 	unsigned short	hideset;	/* TODO: 隐藏集合? */
 	unsigned int	wslen;		/* TODO: white space length? */
-	unsigned int	len;		/* TODO: tokend的长度? */
-	uchar	*t;					/* TODO: 干嘛的? */
+	unsigned int	len;		/* token长度 */
+	uchar	*t;					/* token字串 */
 } Token;
 
+/**
+ * tokenrow - 描述一串token
+ */
 typedef struct tokenrow {
 	Token	*tp;		/* 当前正被扫描的token(current one to scan) */
-	Token	*bp;		/* base (allocated value) */
-	Token	*lp;		/* last+1 token used */
-	int	max;		/* number allocated */
+	Token	*bp;		/* Token数组的基地址(base of allocated value) */
+	Token	*lp;		/* 指向上上一个Token(last+1 token used) */
+	int	max;			/* 数组中Token的个数(number allocated) */
 } Tokenrow;
 
 /**
@@ -72,6 +155,9 @@ typedef struct source {
 	struct	source *next;	/* stack for #include */
 } Source;
 
+/**
+ * nlist - 条件编译的 nesting list
+ */
 typedef struct nlist {
 	struct nlist *next;
 	uchar	*name;
@@ -82,15 +168,20 @@ typedef struct nlist {
 	char	flag;		/* is defined, is pp name */
 } Nlist;
 
+/**
+ * includelist - 文件包含的list
+ */
 typedef	struct	includelist {
 	char	deleted;
 	char	always;
 	char	*file;
 } Includelist;
 
-#define	new(t)	(t *)domalloc(sizeof(t))
-#define	quicklook(a,b)	(namebit[(a)&077] & (1<<((b)&037)))
-#define	quickset(a,b)	namebit[(a)&077] |= (1<<((b)&037))
+#define		new(t)			(t *)domalloc(sizeof(t))
+
+#define		quicklook(a,b)	(namebit[(a)&077] & (1<<((b)&037)))
+#define		quickset(a,b)	namebit[(a)&077] |= (1<<((b)&037))
+
 extern	unsigned long namebit[077+1];
 
 enum errtype { WARNING, ERROR, FATAL }; /* 错误级别 */

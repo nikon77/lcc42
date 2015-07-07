@@ -10,7 +10,7 @@ extern	int	verbose;
 extern	int	Cplusplus;
 Nlist	*kwdefined;
 
-#define	NLSIZE	128
+#define		NLSIZE	128
 
 static Nlist	*nlist[NLSIZE];
 

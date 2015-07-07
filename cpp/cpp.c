@@ -6,31 +6,32 @@
 #include <assert.h>
 #include "cpp.h"
 
-#define		OUTS	16384		/* 定义输出缓冲区的大小 */
-char	outbuf[OUTS]; /* TODO: 输出缓冲区? */
-char	*outp = outbuf; /* 输出缓冲区的指针 */
-Source	*cursource; /* 当前的输入源 */
-int	nerrs; /* 记录预处理中错误数 */
-struct	token nltoken = { NL, 0, 0, 0, 1, (uchar*)"\n" }; /* TODO: 这是啥? */
-char	*curtime; /* 当前时间的字串 */
-int	incdepth;
-int	ifdepth;
-int	ifsatisfied[NIF];
-int	skipping;
+#define		OUTS	16384		/* 输出缓冲区的大小 */
+char		outbuf[OUTS];		/* 输出缓冲区 */
+char		*outp = outbuf;		/* 输出缓冲区的指针 */
+Source		*cursource;			/* 当前的输入源 */
+int			nerrs;				/* 记录预处理中错误数 */
 
-char rcsid[] = "$Revision$ $Date$"; /* rcs版本字串 */
+struct	token nltoken = { NL, 0, 0, 0, 1, (uchar*)"\n" }; /* 换行符的token结构 */
+char	*curtime;			/* 当前时间的字串 */
+int		incdepth;			/* 头文件包含的深度 */
+int		ifdepth;			/* 条件编译语句的内嵌深度 */
+int		ifsatisfied[NIF];	/* 条件编译深度数组，例如: ifsatisfied[4],表明深度为4的#if被满足了... */
+int		skipping;			/* TODO: 略过谁？*/
+
+char rcsid[] = "lcpp version 4.2";	/* 版本字串 */
 
 int main(int argc, char **argv)
 {
-	Tokenrow tr;
-	time_t t; /* 保存当前时间的整数值 */
-	char ebuf[BUFSIZ];
+	Tokenrow tr;			/* token行 */
+	time_t t;				/* 保存当前时间的整数值 */
+	char ebuf[BUFSIZ];		/* stderr buffer */
 
-	setbuf(stderr, ebuf); /* 设定标准错误的输出缓冲区为ebuf */
-	t = time(NULL);	/* 获得当前时间的整数值 */
-	curtime = ctime(&t); /* 获得当前时间的字串值(例如: Sat Jul  4 12:27:13 2014)保存到全局变量curtime中 */
-	maketokenrow(3, &tr);
-	expandlex();
+	setbuf(stderr, ebuf);	/* 设定标准错误的输出缓冲区为ebuf */
+	t = time(NULL);			/* 获得当前时间的整数值 */
+	curtime = ctime(&t);	/* 获得当前时间的字串值(例如: Sat Jul  4 12:27:13 2014)保存到全局变量curtime中 */
+	maketokenrow(3, &tr);	/* 建立一个 token row */
+	expandlex();			/* 初始化状态机 */
 	setup(argc, argv);
 	fixlex();
 	iniths();
@@ -38,7 +39,7 @@ int main(int argc, char **argv)
 	process(&tr);
 	flushout();
 	fflush(stderr);
-	exit(nerrs > 0);
+	exit(nerrs > 0);		/* 退出进程 */
 	return 0;
 }
 

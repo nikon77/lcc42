@@ -10,7 +10,7 @@ extern	int	optind;
 int	verbose;
 int	Mflag;	/* only print active include files */
 char	*objname; /* "src.$O: " */
-int	Cplusplus = 1;
+int		Cplusplus = 1; /* =1，兼容C++的单行注释 */
 
 void
 setup(int argc, char **argv)

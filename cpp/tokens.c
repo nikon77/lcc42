@@ -73,6 +73,11 @@ static const char wstab[] = {
 	0,	/* UMINUS */
 };
 
+/**
+ * maketokenrow - 建立一个Token Row
+ * @size: 该Token Row的大小
+ * @trp: Tokenrow结构
+ */
 void
 maketokenrow(int size, Tokenrow *trp)
 {

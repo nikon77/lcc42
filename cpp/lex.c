@@ -22,17 +22,17 @@
  *      nextstate: 6 bits; ?\ marker: 1 bit; tokentype: 9 bits.
  */
 
-#define	MAXSTATE 32		/* 最大的状态  */
-#define	ACT(tok,act)	((tok<<7)+act)
-#define	QBSBIT	0100
-#define	GETACT(st)	(st>>7)&0x1ff
+#define		MAXSTATE		32				/* 最大的状态  */
+#define		ACT(tok,act)	((tok<<7)+act)
+#define		QBSBIT			0100
+#define		GETACT(st)		(st>>7)&0x1ff
 
 /* 字符类(character classes) */
-#define	C_WS	1	/* 空白符(white space) */
-#define	C_ALPH	2	/* 字母(Alpha) */
-#define	C_NUM	3	/* 数字(Number) */
-#define	C_EOF	4	/* 文件结束符(End Of File) */
-#define	C_XX	5	/* TODO: 随机字符 */
+#define		C_WS	1	/* 空白符(white space) */
+#define		C_ALPH	2	/* 字母(Alpha),注意: 下划线也是字母 */
+#define		C_NUM	3	/* 数字(Number) */
+#define		C_EOF	4	/* 文件结束符(End Of File) */
+#define		C_XX	5	/* TODO: 随机字符 */
 
 /* 状态集合 */
 enum state {
@@ -46,10 +46,13 @@ enum state {
 int	tottok;
 int	tokkind[256];
 
+/**
+ * fsm - 有限状态机(finite state machine)
+ */
 struct	fsm {
-	int	state;		/* if in this state */
+	int	state;			/* if in this state */
 	uchar	ch[4];		/* and see one of these characters */
-	int	nextstate;	/* enter this state if +ve */
+	int	nextstate;		/* enter this state if +ve */
 };
 
 /*const*/ struct fsm fsm[] = {
@@ -233,12 +236,17 @@ struct	fsm {
 	-1
 };
 
-/* first index is char, second is state */
-/* increase #states to power of 2 to encourage use of shift */
+/**
+ *  bigfsm - 大状态机(big finite state machine)
+ *  第一个索引是'字符'，第二个索引是'状态'(first index is char, second is state)
+ *  increase #states to power of 2 to encourage use of shift
+ */
 short	bigfsm[256][MAXSTATE];
 
-void
-expandlex(void)
+/**
+ * expandlex - TODO: 这函数到底是初始化啥呢？目前的理解：初始化状态机……
+ */
+void expandlex(void)
 {
 	/*const*/ struct fsm *fp;
 	int i, j, nstate;
@@ -269,8 +277,14 @@ expandlex(void)
 			}
 		}
 	}
-	/* install special cases for ? (trigraphs),  \ (splicing), runes, and EOB */
-	for (i=0; i<MAXSTATE; i++) {
+	/**
+	 *  install special cases for:
+	 *  ? (trigraphs，三字符序列),
+	 *  \ (splicing，续行符),
+	 *  runes(古日尔曼字母),
+	 *  and EOB (end of input buffer)
+	 */
+	for (i=0; i < MAXSTATE; i++) {
 		for (j=0; j<0xFF; j++)
 			if (j=='?' || j=='\\') {
 				if (bigfsm[j][i]>0)
