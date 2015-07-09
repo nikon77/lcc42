@@ -13,14 +13,6 @@ int		Mflag;	/* only print active include files */
 char	*objname; /* "src.$O: " */
 int		Cplusplus = 1; /* =1，默认兼容C++的单行注释 */
 
-void print_argv(int argc, char *argv[]) {
-	int i;
-	for (i = 0; i < argc; i++) {
-		printf("[%d]=%s , ", i, argv[i]);
-	}
-	printf("\n");
-}
-
 /**
  * setup - TODO
  */
@@ -33,7 +25,6 @@ void setup(int argc, char **argv)
 	extern void setup_kwtab(void);
 
 	setup_kwtab(); /* 建立关键字hash表 */
-	print_argv(argc,argv);
 	while ((c = getopt(argc, argv, "MNOVv+I:D:U:F:lg")) != -1)
 		switch (c) {
 		case 'N': /* 不包含系统头文件目录 */
@@ -75,22 +66,21 @@ void setup(int argc, char **argv)
 		default: /* '?' */
 			break;
 		}
-	print_argv(argc,argv);
-	dp = ".";
-	fp = "<stdin>";
-	fd = stdin;
-	if (optind < argc) {
-		if ((fp = strrchr(argv[optind], '/')) != NULL) {
-			int len = fp - argv[optind];
-			dp = (char*)newstring((uchar*)argv[optind], len+1, 0);
-			dp[len] = '\0';
+	dp = "."; /* 默认的路径 */
+	fp = "<stdin>"; /* 默认的输入文件名是标准输入 */
+	fd = stdin; /* 默认设定fd为标准输入stdin文件指针 */
+	if (optind < argc) { /* 如果命令行上有输入文件的话 */
+		if ((fp = strrchr(argv[optind], '/')) != NULL) { /* 从右往左搜索字符'/' */
+			int len = fp - argv[optind]; /* 计算路径的dirname的长度. (man 1 dirname) */
+			dp = (char*)newstring((uchar*)argv[optind], len+1, 0); /* 将dirname字符串复制道dp中 */
+			dp[len] = '\0'; /* 设置字符串结尾的空字符 */
 		}
-		fp = (char*)newstring((uchar*)argv[optind], strlen(argv[optind]), 0);
-		if ((fd = fopen(fp, "r")) == NULL)
+		fp = (char*)newstring((uchar*)argv[optind], strlen(argv[optind]), 0); /* 得到输入源文件的文件名 */
+		if ((fd = fopen(fp, "r")) == NULL) /* 以只读模式打开输入源文件 */
 			error(FATAL, "Can't open input file %s", fp);
 	}
-	if (optind+1 < argc) {
-		FILE *fdo = freopen(argv[optind+1], "w", stdout);
+	if (optind+1 < argc) { /* 如果命令行上还指定了输出文件 */
+		FILE *fdo = freopen(argv[optind+1], "w", stdout); /* 将标准输出重定向到文件 */
 		if (fdo == NULL)
 			error(FATAL, "Can't open output file %s", argv[optind+1]);
 	}
