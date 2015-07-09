@@ -390,8 +390,7 @@ evalop(struct pri pri)
 	return 0;
 }
 
-struct value
-tokval(Token *tp)
+struct value tokval(Token *tp)
 {
 	struct value v;
 	Nlist *np;
@@ -514,8 +513,7 @@ tokval(Token *tp)
 	return v;
 }
 
-int
-digit(int i)
+int digit(int i)
 {
 	if ('0'<=i && i<='9')
 		i -= '0';

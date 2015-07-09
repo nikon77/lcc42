@@ -4,7 +4,10 @@
 #include "cpp.h"
 
 /*
- * lexical FSM encoding
+ * 词法有限状态机编码(lexical FSM encoding)
+ * 当在状态state，并且在ch数组中的任意字符到来时,那么就进入nextstate
+ * 当 States >= S_SELF 时，要么进入了终态，要么至少需要进一步的处理。
+ *
  *   when in state state, and one of the characters
  *   in ch arrives, enter nextstate.
  *   States >= S_SELF are either final, or at least require special action.
@@ -36,11 +39,49 @@
 
 /* 状态集合 */
 enum state {
-	START=0, NUM1, NUM2, NUM3, ID1, ST1, ST2, ST3, COM1, COM2, COM3, COM4,
-	CC1, CC2, WS1, PLUS1, MINUS1, STAR1, SLASH1, PCT1, SHARP1,
-	CIRC1, GT1, GT2, LT1, LT2, OR1, AND1, ASG1, NOT1, DOTS1,
-	S_SELF=MAXSTATE, S_SELFB, S_EOF, S_NL, S_EOFSTR,
-	S_STNL, S_COMNL, S_EOFCOM, S_COMMENT, S_EOB, S_WS, S_NAME
+	START=0,
+	NUM1,
+	NUM2,
+	NUM3, 	/* 浮点数状态 */
+	ID1,	/* 标识符状态 */
+	ST1,	/* 宽字符状态 */
+	ST2,
+	ST3,
+	COM1,
+	COM2,
+	COM3,
+	COM4,
+	CC1,
+	CC2,
+	WS1,	/* 空白符状态. ' '空格;'\t'横向制表符;'\v'纵向制表符 */
+	PLUS1,
+	MINUS1,
+	STAR1,
+	SLASH1,
+	PCT1,
+	SHARP1,
+	CIRC1,
+	GT1,
+	GT2,
+	LT1,
+	LT2,
+	OR1,
+	AND1,
+	ASG1,
+	NOT1,
+	DOTS1,
+	S_SELF=MAXSTATE,
+	S_SELFB,
+	S_EOF,
+	S_NL,
+	S_EOFSTR,
+	S_STNL,
+	S_COMNL,
+	S_EOFCOM,
+	S_COMMENT,
+	S_EOB,
+	S_WS,
+	S_NAME
 };
 
 int	tottok;
@@ -50,9 +91,9 @@ int	tokkind[256];
  * fsm - 有限状态机(finite state machine)
  */
 struct	fsm {
-	int	state;			/* if in this state */
-	uchar	ch[4];		/* and see one of these characters */
-	int	nextstate;		/* enter this state if +ve */
+	int	state;			/* 如果在这个状态(if in this state) */
+	uchar	ch[4];		/* 并且查看如果有在ch数组中的任意字符到来时(and see one of these characters) */
+	int	nextstate;		/* 进入nextstate,TODO: 什么是 +ve ? (enter this state if +ve) */
 };
 
 /*const*/ struct fsm fsm[] = {
@@ -244,7 +285,8 @@ struct	fsm {
 short	bigfsm[256][MAXSTATE];
 
 /**
- * expandlex - TODO: 这函数到底是初始化啥呢？目前的理解：初始化状态机……
+ * expandlex - 初始化状态机
+ * TODO: 需要仔细研究...
  */
 void expandlex(void)
 {
@@ -295,49 +337,66 @@ void expandlex(void)
 		if (bigfsm[EOFC][i]>=0)
 			bigfsm[EOFC][i] = ~S_EOF;
 	}
+//	/* debug: print bigfsm */
+//	printf("bigfsm:\n");
+//	for(i=0; i<256;i++) {
+//		printf("%3d:",i);
+//		for(j=0;j<32;j++) {
+//			if(j%10==0)
+//				printf("[%d]",j);
+//			printf("%04x,",(unsigned short)bigfsm[i][j]);
+//		}
+//		printf("\n");
+//	}
+//	exit(1);
 }
 
-void
-fixlex(void)
+/**
+ * fixlex - 添加c++的单行注释功能
+ */
+void fixlex(void)
 {
 	/* do C++ comments? */
 	if (Cplusplus==0)
 		bigfsm['/'][COM1] = bigfsm['x'][COM1];
 }
 
-/*
- * fill in a row of tokens from input, terminated by NL or END
+/**
+ * gettokens - 从输入源的缓冲区中得到一个 token row
+ * @trp: 保存返回的 token row
+ * @reset: reset如果为非0，则表示输入缓冲可以被rewind
+ * 返回值： TODO
+ * NOTE: fill in a row of tokens from input, terminated by NL or END
  * First token is put at trp->lp.
  * Reset is non-zero when the input buffer can be "rewound."
  * The value is a flag indicating that possible macros have
  * been seen in the row.
  */
-int
-gettokens(Tokenrow *trp, int reset)
+int gettokens(Tokenrow *trp, int reset)
 {
 	register int c, state, oldstate;
 	register uchar *ip;
 	register Token *tp, *maxp;
 	int runelen;
-	Source *s = cursource;
+	Source *s = cursource; /* 从当前输入源得到token */
 	int nmac = 0;
 	extern char outbuf[];
 
-	tp = trp->lp;
-	ip = s->inp;
-	if (reset) {
-		s->lineinc = 0;
-		if (ip>=s->inl) {		/* nothing in buffer */
+	tp = trp->lp; /* 拿到token row中第一个token结构的首地址 */
+	ip = s->inp; /* 拿到输入源缓冲区中当前正在处理的字符的首地址 */
+	if (reset) { /* 如果如果缓冲区可以被“重绕” */
+		s->lineinc = 0; /* TODO:  */
+		if (ip>=s->inl) { /* 如果缓冲区中无数据 */
 			s->inl = s->inb;
-			fillbuf(s);
+			fillbuf(s); /* 从输入源加载数据到缓冲区中 */
 			ip = s->inp = s->inb;
-		} else if (ip >= s->inb+(3*INS/4)) {
-			memmove(s->inb, ip, 4+s->inl-ip);
-			s->inl = s->inb+(s->inl-ip);
-			ip = s->inp = s->inb;
+		} else if (ip >= s->inb+(3*INS/4)) { /* 如果缓冲区中有数据，但当前指针已经超过了buffer大小的3/4,那么开始“重绕” */
+			memmove(s->inb, ip, 4+s->inl-ip); /* 将缓冲区中的有效数据复制到缓冲区开始 */
+			s->inl = s->inb+(s->inl-ip); /* 重新设置缓冲区末尾指针 */
+			ip = s->inp = s->inb; /* 重新设置缓冲区开始指针和当前指针 */
 		}
 	}
-	maxp = &trp->bp[trp->max];
+	maxp = &trp->bp[trp->max]; /* 拿到token row最后一个元素的下一个元素的首地址(哨兵地址） */
 	runelen = 1;
 	for (;;) {
 	   continue2:
@@ -477,8 +536,7 @@ gettokens(Tokenrow *trp, int reset)
 }
 
 /* have seen ?; handle the trigraph it starts (if any) else 0 */
-int
-trigraph(Source *s)
+int trigraph(Source *s)
 {
 	int c;
 
@@ -515,8 +573,7 @@ trigraph(Source *s)
 	return c;
 }
 
-int
-foldline(Source *s)
+int foldline(Source *s)
 {
 	while (s->inp+1 >= s->inl && fillbuf(s)!=EOF)
 		;
@@ -528,8 +585,7 @@ foldline(Source *s)
 	return 0;
 }
 
-int
-fillbuf(Source *s)
+int fillbuf(Source *s)
 {
 	int n, nr;
 
@@ -549,42 +605,48 @@ fillbuf(Source *s)
 	return 0;
 }
 
-/*
+/**
+ * setsource - 设置输入源
+ * @name：输入源的文件名
+ * @fd：输入源的文件指针
+ * @str：预先往输入源中放置的待处理的字符串
+ * 返回值： 返回新分配的输入源节点的首地址
  * Push down to new source of characters.
  * If fd!=NULL and str==NULL, then from a file `name';
  * if fd==NULL and str, then from the string.
  */
-Source *
-setsource(char *name, FILE *fd, char *str)
+Source * setsource(char *name, FILE *fd, char *str)
 {
 	Source *s = new(Source);
 	int len;
 
-	s->line = 1;
-	s->lineinc = 0;
-	s->fd = fd;
-	s->filename = name;
-	s->next = cursource;
-	s->ifdepth = 0;
-	cursource = s;
+	s->line = 1; /* 设置当前行号为1 */
+	s->lineinc = 0; /* TODO: 啥意思？ */
+	s->fd = fd;	/* 设置source的文件指针 */
+	s->filename = name; /* 设置文件的名字 */
+	s->next = cursource; /* 头插法插入节点（此链表是一个单向链表） */
+	s->ifdepth = 0; /* 条件编译指令的陷入深度 */
+	cursource = s;  /* 设置当前源为新分配的节点 */
 	/* slop at right for EOB */
-	if (str) {
-		len = strlen(str);
-		s->inb = domalloc(len+4);
-		s->inp = s->inb;
-		strncpy((char *)s->inp, str, len);
-	} else {
-		s->inb = domalloc(INS+4);
-		s->inp = s->inb;
+	if (str) { /* 如果str不为空 */
+		len = strlen(str); /* 计算该str的字符串长度 */
+		s->inb = domalloc(len+4); /* 分配输入缓冲（之所以+4是因为，要在str后面放置几个哨兵字符） */
+		s->inp = s->inb; /* 矫正输入缓冲的基地址指针和当前指针 */
+		strncpy((char *)s->inp, str, len); /* 将str复制到新分配的输入缓冲中去 */
+	} else { /* 如果str为空 */
+		s->inb = domalloc(INS+4); /* 分配输入缓冲区 */
+		s->inp = s->inb; /* 矫正输入缓冲的基地址指针和当前指针 */
 		len = 0;
 	}
-	s->inl = s->inp+len;
-	s->inl[0] = s->inl[1] = EOB;
-	return s;
+	s->inl = s->inp+len; /* s->inl指向输入缓冲中最后一个有效字符的下一个字符 */
+	s->inl[0] = s->inl[1] = EOB; /* 设置End Of Buffer的哨兵字符 */
+	return s; /* 返回新创立的源节点 */
 }
 
-void
-unsetsource(void)
+/**
+ * unsetsource - 取消栈顶的输入源节点
+ */
+void unsetsource(void)
 {
 	Source *s = cursource;
 

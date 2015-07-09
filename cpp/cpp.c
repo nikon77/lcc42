@@ -33,12 +33,12 @@ int main(int argc, char **argv)
 	maketokenrow(3, &tr);	/* 建立一个 token row */
 	expandlex();			/* 初始化状态机 */
 	setup(argc, argv);
-	fixlex();
-	iniths();
-	genline();
+	fixlex();				/* 使lex兼容C++的单行注释 */
+	iniths();				/* 初始化hideset */
+	genline();				/* 产生一个line control信息 */
 	process(&tr);
-	flushout();
-	fflush(stderr);
+	flushout();				/* flush output buffer to stdout */
+	fflush(stderr);			/* flush stderr */
 	exit(nerrs > 0);		/* 退出进程 */
 	return 0;
 }

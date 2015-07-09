@@ -78,8 +78,7 @@ static const char wstab[] = {
  * @size: 该Token Row的大小
  * @trp: Tokenrow结构
  */
-void
-maketokenrow(int size, Tokenrow *trp)
+void maketokenrow(int size, Tokenrow *trp)
 {
 	trp->max = size;
 	if (size>0)
@@ -90,8 +89,7 @@ maketokenrow(int size, Tokenrow *trp)
 	trp->lp = trp->bp;
 }
 
-Token *
-growtokenrow(Tokenrow *trp)
+Token * growtokenrow(Tokenrow *trp)
 {
 	int ncur = trp->tp - trp->bp;
 	int nlast = trp->lp - trp->bp;
@@ -108,8 +106,7 @@ growtokenrow(Tokenrow *trp)
 /*
  * Compare a row of tokens, ignoring the content of WS; return !=0 if different
  */
-int
-comparetokens(Tokenrow *tr1, Tokenrow *tr2)
+int comparetokens(Tokenrow *tr1, Tokenrow *tr2)
 {
 	Token *tp1, *tp2;
 
@@ -149,8 +146,7 @@ insertrow(Tokenrow *dtr, int ntok, Tokenrow *str)
 /*
  * make sure there is WS before trp->tp, if tokens might merge in the output
  */
-void
-makespace(Tokenrow *trp)
+void makespace(Tokenrow *trp)
 {
 	uchar *tt;
 	Token *tp = trp->tp;
@@ -180,8 +176,7 @@ makespace(Tokenrow *trp)
  * It is assumed that there is enough space.
  *  Not strictly conforming.
  */
-void
-movetokenrow(Tokenrow *dtr, Tokenrow *str)
+void movetokenrow(Tokenrow *dtr, Tokenrow *str)
 {
 	int nby;
 
@@ -196,8 +191,7 @@ movetokenrow(Tokenrow *dtr, Tokenrow *str)
  * The row may need to be grown.
  * Non-strictly conforming because of the (char *), but easily fixed
  */
-void
-adjustrow(Tokenrow *trp, int nt)
+void adjustrow(Tokenrow *trp, int nt)
 {
 	int nby, size;
 
@@ -217,8 +211,7 @@ adjustrow(Tokenrow *trp, int nt)
  * Copy a row of tokens into the destination holder, allocating
  * the space for the contents.  Return the destination.
  */
-Tokenrow *
-copytokenrow(Tokenrow *dtr, Tokenrow *str)
+Tokenrow * copytokenrow(Tokenrow *dtr, Tokenrow *str)
 {
 	int len = rowlen(str);
 
@@ -233,8 +226,7 @@ copytokenrow(Tokenrow *dtr, Tokenrow *str)
  * The value strings are copied as well.  The first token
  * has WS available.
  */
-Tokenrow *
-normtokenrow(Tokenrow *trp)
+Tokenrow * normtokenrow(Tokenrow *trp)
 {
 	Token *tp;
 	Tokenrow *ntrp = new(Tokenrow);
@@ -262,8 +254,7 @@ normtokenrow(Tokenrow *trp)
 /*
  * Debugging
  */
-void
-peektokens(Tokenrow *trp, char *str)
+void peektokens(Tokenrow *trp, char *str)
 {
 	Token *tp;
 
@@ -291,8 +282,7 @@ peektokens(Tokenrow *trp, char *str)
 	fflush(stderr);
 }
 
-void
-puttokens(Tokenrow *trp)
+void puttokens(Tokenrow *trp)
 {
 	Token *tp;
 	int len;
@@ -329,8 +319,7 @@ puttokens(Tokenrow *trp)
 		flushout();
 }
 
-void
-flushout(void)
+void flushout(void)
 {
 	if (wbp>wbuf) {
 		fwrite(wbuf, 1, wbp-wbuf, stdout);
@@ -342,8 +331,7 @@ flushout(void)
 /*
  * turn a row into just a newline
  */
-void
-setempty(Tokenrow *trp)
+void setempty(Tokenrow *trp)
 {
 	trp->tp = trp->bp;
 	trp->lp = trp->bp+1;
@@ -353,8 +341,7 @@ setempty(Tokenrow *trp)
 /*
  * generate a number
  */
-char *
-outnum(char *p, int n)
+char * outnum(char *p, int n)
 {
 	if (n>=10)
 		p = outnum(p, n/10);
@@ -366,8 +353,7 @@ outnum(char *p, int n)
  * allocate and initialize a new string from s, of length l, at offset o
  * Null terminated.
  */
-uchar *
-newstring(uchar *s, int l, int o)
+uchar * newstring(uchar *s, int l, int o)
 {
 	uchar *ns = (uchar *)domalloc(l+o+1);
 

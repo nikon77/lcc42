@@ -3,7 +3,7 @@
 #include <string.h>
 #include "cpp.h"
 
-Includelist	includelist[NINCLUDE];
+Includelist	includelist[NINCLUDE]; /* 头文件包含目录列表(数组) */
 
 extern char	*objname;
 

@@ -6,12 +6,12 @@
 #define		NINCLUDE	32			/* 包含目录的最大个数(即命令行上-I选项的最大个数) */
 #define		NIF			32			/* #if条件编译的最大陷入(nesting)深度 */
 
-#ifndef EOF
-#define	EOF	(-1)
+#ifndef		EOF
+#define		EOF		(-1)
 #endif
 
-#ifndef NULL
-#define NULL	0
+#ifndef		NULL
+#define		NULL	((void *)0)
 #endif
 
 #ifndef __alpha
@@ -110,12 +110,12 @@ enum kwtype {
 };
 
 #define		ISDEFINED	01	/* has #defined value */
-#define		ISKW		02	/* is PP keyword */
+#define		ISKW		02	/* is PP(preprocessor) keyword */
 #define		ISUNCHANGE	04	/* can't be #defined in PP */
 #define		ISMAC		010	/* builtin macro, e.g. __LINE__ */
 
 #define		EOB		0xFE		/* sentinel(哨兵) for end of input buffer */
-#define		EOFC	0xFD		/* sentinel(哨兵) for end of input file */
+#define		EOFC	0xFD		/* sentinel(哨兵) for end of input file(End Of File Character) */
 #define		XPWS	1			/* token flag: white space to assure token sep. */
 
 /**
@@ -141,40 +141,40 @@ typedef struct tokenrow {
 } Tokenrow;
 
 /**
- * 描述一个输入的源文件
+ * 描述一个输入文件（栈节点）
  */
 typedef struct source {
 	char	*filename;		/* 源文件的文件名 */
-	int	line;				/* 当前的行号 */
-	int	lineinc;			/* TODO: adjustment for \\n lines */
-	uchar	*inb;			/* 输入缓冲区 */
-	uchar	*inp;			/* 输入指针 */
-	uchar	*inl;			/* TODO: 输入结束? end of input */
+	int		line;			/* 当前的行号 */
+	int		lineinc;		/* TODO: adjustment for \\n lines */
+	uchar	*inb;			/* 输入缓冲区的基地址(input base) */
+	uchar	*inp;			/* 指向输入缓冲区中当前正在处理的字符(input position) */
+	uchar	*inl;			/* 指向当前输入缓冲区中最后一个有效字符的下一个字符（其后可能是EOB或EOF标记）(input length) */
 	FILE*	fd;				/* 输入源文件的FILE指针(input source) */
-	int	ifdepth;			/* conditional nesting in include */
+	int		ifdepth;		/* conditional nesting in include */
 	struct	source *next;	/* stack for #include */
 } Source;
 
 /**
- * nlist - 条件编译的 nesting list
+ * nlist - token的hash表
  */
 typedef struct nlist {
-	struct nlist *next;
-	uchar	*name;
-	int	len;
-	Tokenrow *vp;		/* value as macro */
-	Tokenrow *ap;		/* list of argument names, if any */
-	char	val;		/* value as preprocessor name */
-	char	flag;		/* is defined, is pp name */
+	struct nlist *next;		/* 下一节点 */
+	uchar	*name;			/* 名字 */
+	int	len;				/* 长度 */
+	Tokenrow *vp;			/* 宏展开的值(value as macro) */
+	Tokenrow *ap;			/* 参数名的列表,如果有的话(list of argument names, if any) */
+	char	val;			/* enum toktype类型(value as preprocessor name) */
+	char	flag;			/* is defined, is pp name */
 } Nlist;
 
 /**
  * includelist - 文件包含的list
  */
 typedef	struct	includelist {
-	char	deleted;
-	char	always;
-	char	*file;
+	char	deleted;	/* 设置为0表明，从头文件包含目录列表中删除 */
+	char	always;		/* TODO:总是干嘛？ */
+	char	*file;		/* -I指令中的包含目录 */
 } Includelist;
 
 #define		new(t)			(t *)domalloc(sizeof(t))

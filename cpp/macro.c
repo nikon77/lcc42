@@ -6,8 +6,7 @@
 /*
  * do a macro definition.  tp points to the name being defined in the line
  */
-void
-dodefine(Tokenrow *trp)
+void dodefine(Tokenrow *trp)
 {
 	Token *tp;
 	Nlist *np;
@@ -88,8 +87,7 @@ dodefine(Tokenrow *trp)
 /*
  * Definition received via -D or -U
  */
-void
-doadefine(Tokenrow *trp, int type)
+void doadefine(Tokenrow *trp, int type)
 {
 	Nlist *np;
 	static unsigned char one[] = "1";
@@ -129,8 +127,7 @@ syntax:
  * Do macro expansion in a row of tokens.
  * Flag is NULL if more input can be gathered.
  */
-void
-expandrow(Tokenrow *trp, char *flag)
+void expandrow(Tokenrow *trp, char *flag)
 {
 	Token *tp;
 	Nlist *np;
@@ -175,8 +172,7 @@ expandrow(Tokenrow *trp, char *flag)
  * Return trp->tp at the first token next to be expanded
  * (ordinarily the beginning of the expansion)
  */
-void
-expand(Tokenrow *trp, Nlist *np)
+void expand(Tokenrow *trp, Nlist *np)
 {
 	Tokenrow ntr;
 	int ntokc, narg, i;
@@ -227,8 +223,7 @@ expand(Tokenrow *trp, Nlist *np)
  * Return total number of tokens passed, stash number of args found.
  * trp->tp is not changed relative to the tokenrow.
  */
-int
-gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
+int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
 {
 	int parens = 1;
 	int ntok = 0;
@@ -317,8 +312,7 @@ gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
  * substitute the argument list into the replacement string
  *  This would be simple except for ## and #
  */
-void
-substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr)
+void substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr)
 {
 	Tokenrow tatr;
 	Token *tp;
@@ -357,8 +351,7 @@ substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr)
 /*
  * Evaluate the ## operators in a tokenrow
  */
-void
-doconcat(Tokenrow *trp)
+void doconcat(Tokenrow *trp)
 {
 	Token *ltp, *ntp;
 	Tokenrow ntr;
@@ -400,8 +393,7 @@ doconcat(Tokenrow *trp)
  * look it up in mac's arglist, and if found, return the
  * corresponding index in the argname array.  Return -1 if not found.
  */
-int
-lookuparg(Nlist *mac, Token *tp)
+int lookuparg(Nlist *mac, Token *tp)
 {
 	Token *ap;
 
@@ -418,8 +410,7 @@ lookuparg(Nlist *mac, Token *tp)
  * Return a quoted version of the tokenrow (from # arg)
  */
 #define	STRLEN	512
-Tokenrow *
-stringify(Tokenrow *vp)
+Tokenrow * stringify(Tokenrow *vp)
 {
 	static Token t = { STRING };
 	static Tokenrow tr = { &t, &t, &t+1, 1 };
@@ -454,8 +445,7 @@ stringify(Tokenrow *vp)
 /*
  * expand a builtin name
  */
-void
-builtin(Tokenrow *trp, int biname)
+void builtin(Tokenrow *trp, int biname)
 {
 	char *op;
 	Token *tp;
