@@ -341,27 +341,27 @@ void expandlex(void)
 
 	for (fp = fsm; fp->state>=0; fp++) { /* 对于任意大于0的状态 */
 		for (i=0; fp->ch[i]; i++) { /* 如果其下一字符不为0 */
-			nstate = fp->nextstate; /* 获取到它的下一状态 */
+			nstate = fp->nextstate; /* 获取到它的下一状态(迁移状态) */
 			if (nstate >= S_SELF) /* 如果下一状态的值大于S_SELF（说明是接受状态或非法状态） */
 				nstate = ~nstate; /* 对下一状态按位取反（取反后，第7位由0变成了1）。为啥要取反？答曰：可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。 */
 			switch (fp->ch[i]) {
 
 			case C_XX:		/* 如果下一字符是随机（任一）字符 */
 				for (j=0; j<256; j++)
-					bigfsm[j][fp->state] = nstate;	/* 设置当前状态遇到任意字符后从fp->state跳转到nstate */
+					bigfsm[j][fp->state] = nstate;	/* 设置当前状态遇到任意字符后的迁移状态为nstate */
 				continue;
 			case C_ALPH:	/* 如果下一字符是字母或下划线 */
 				for (j=0; j<=256; j++)
 					if ('a'<=j&&j<='z' || 'A'<=j&&j<='Z'
 					  || j=='_')
-						bigfsm[j][fp->state] = nstate; /* 设置当前状态，遇到字母或下划线后从fp->state跳转到nstate */
+						bigfsm[j][fp->state] = nstate; /* 设置当前状态遇到字母或下划线后的迁移状态为nstate */
 				continue;
 			case C_NUM: /* 如果下一字符是阿拉伯数字 */
 				for (j='0'; j<='9'; j++)
-					bigfsm[j][fp->state] = nstate; /* 设置当前状态，遇到阿拉伯数字后从状态fp->state跳转道nstate */
+					bigfsm[j][fp->state] = nstate; /* 设置当前状态遇到阿拉伯数字后的迁移状态为nstate */
 				continue;
 			default:
-				bigfsm[fp->ch[i]][fp->state] = nstate;
+				bigfsm[fp->ch[i]][fp->state] = nstate; /* 设置当前状态遇到fp->ch[i]后的迁移状态为nstate */
 			}
 		}
 	}
@@ -369,21 +369,28 @@ void expandlex(void)
 	 *  install special cases for:
 	 *  ? (trigraphs，三字符序列),
 	 *  \ (splicing，续行符),
-	 *  runes(古日尔曼字母),
+	 *  runes(古日尔曼字母), TODO：程序中未做处理
 	 *  and EOB (end of input buffer)
 	 */
 	for (i=0; i < MAXSTATE; i++) { /* 对于每一状态i */
-		for (j=0; j<0xFF; j++) /* 对于每一行（每一字符j） */
+		for (j=0; j<0xFF; j++) /* 查看该状态i的下一字符j */
 			if (j=='?' || j=='\\') { /* 如果该字符是'?'或'\\' */
-				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的下一状态大于0（说明是非接受状态，而且第7位是0） */
-					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“下一状态”各位按位取反（将该“下一状态”变成接受状态，而且第7位从0变成了1） */
-				bigfsm[j][i] &= ~QBSBIT; /* 将该“下一状态”的第7位清0。 */
+				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的迁移状态大于0（说明是非接受状态，而且第7位是0） */
+					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“下一状态”各位按位取反,取反后该值小于0（将该“下一状态”变成接受状态，而且第7位从0变成了1） */
+				bigfsm[j][i] &= ~QBSBIT; /* 将该“迁移状态”的第7位清0 */
 			}
-		bigfsm[EOB][i] = ~S_EOB; /* 状态i的下一字符是EOB，将S_EOB取反。取反后，第7位为1 */
+		bigfsm[EOB][i] = ~S_EOB; /* 将状态i对应于字符EOB的迁移状态设置为S_EOB的取反（取反后，第7位为1） */
 		if (bigfsm[EOFC][i]>=0) /* 如果状态i对应于字符EOFC的状态大于0 */
 			bigfsm[EOFC][i] = ~S_EOF; /* 将S_EOF取反。取反后，第7位为0 */
 	}
-	/* 综上：第7位实际上起到了判断一个状态是否是接受状态的标识位。如果第7位为1,接受状态;反之，若为0,非接受状态。 */
+	/**
+	 * 综上：nextstate的第7位和最高位（判断nextstate是正值还是负值）构成了4种情况的判断依据：
+	 * nextstate ：       msb（master significant bit）
+	 *    0      ：        0		正常的状态变迁
+	 *    0      ：        1		接受状态，借机处理三字符序列，续行符，古日尔曼字母，EOFC
+	 *    1      ：        0		遇到EOB
+	 *    1      ：        1		接受状态 或 非法状态
+	 */
 #ifdef DEBUG_FSM
 	print_bigfsm();
 	exit(1);
@@ -396,7 +403,7 @@ void expandlex(void)
 void fixlex(void)
 {
 	/* do C++ comments? */
-	if (Cplusplus==0) /* 如果没有开启C++注释支持 */
+	if ( Cplusplus == 0 ) /* 如果没有开启C++注释支持 */
 		bigfsm['/'][COM1] = bigfsm['x'][COM1]; /* 那么只是简单的把C++注释当作除法运算符 */
 }
 
