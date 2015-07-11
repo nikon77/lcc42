@@ -19,11 +19,11 @@ int		ifdepth;			/* 条件编译语句的内嵌深度 */
 int		ifsatisfied[NIF];	/* 条件编译深度数组，例如: ifsatisfied[4],表明深度为4的#if被满足了... */
 int		skipping;			/* TODO: 略过谁？*/
 
-char rcsid[] = "lcpp version 4.2";	/* 版本字串 */
+char rcsid[] = ": version 4.2";	/* 版本字串 */
 
 int main(int argc, char **argv)
 {
-	Tokenrow tr;			/* token行 */
+	Tokenrow tr;			/* token row */
 	time_t t;				/* 保存当前时间的整数值 */
 	char ebuf[BUFSIZ];		/* stderr buffer */
 
@@ -31,8 +31,8 @@ int main(int argc, char **argv)
 	t = time(NULL);			/* 获得当前时间的整数值 */
 	curtime = ctime(&t);	/* 获得当前时间的字串值(例如: Sat Jul  4 12:27:13 2014)保存到全局变量curtime中 */
 	maketokenrow(3, &tr);	/* 建立一个 token row */
-	expandlex();			/* 初始化状态机 */
-	setup(argc, argv);
+	expandlex();			/* 展开状态机 */
+	setup(argc, argv);		/* 建立关键字hash表;处理命令行选项、参数;输出行控制信息 */
 	fixlex();				/* 使lex兼容C++的单行注释 */
 	iniths();				/* 初始化hideset */
 	genline();				/* 产生一个line control信息 */

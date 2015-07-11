@@ -45,7 +45,7 @@ unsigned long	namebit[077+1];
 Nlist 	*np;
 
 /**
- * setup_kwtab - 安装关键字表
+ * setup_kwtab - 安装关键字hash表
  */
 void setup_kwtab(void)
 {

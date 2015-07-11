@@ -14,7 +14,7 @@ char	*objname; /* "src.$O: " */
 int		Cplusplus = 1; /* =1，默认兼容C++的单行注释 */
 
 /**
- * setup - TODO
+ * setup - 建立关键字hash表;处理命令行选项、参数;输出行控制信息
  */
 void setup(int argc, char **argv)
 {
@@ -55,7 +55,7 @@ void setup(int argc, char **argv)
 			Mflag++;
 			break;
 		case 'v': /* 打印版本信息 */
-			fprintf(stderr, "%s %s\n", argv[0], rcsid);
+			fprintf(stderr, "%s%s\n", argv[0], rcsid);
 			break;
 		case 'V': /* 输出详细信息 */
 			verbose++;

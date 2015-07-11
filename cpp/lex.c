@@ -3,22 +3,29 @@
 #include <string.h>
 #include "cpp.h"
 
-/*
- * 词法有限状态机编码(lexical FSM encoding)
- * 当在状态state，并且在ch数组中的任意字符到来时,那么就进入nextstate
- * 当 States >= S_SELF 时，要么进入了终态，要么至少需要进一步的处理。
+/**
+ *   词法有限状态机编码(lexical FSM encoding)
  *
+ *   当在状态state，并且在ch数组中的任意字符到来时,那么就进入nextstate.
  *   when in state state, and one of the characters
  *   in ch arrives, enter nextstate.
+ *
+ *   当 States >= S_SELF 时，要么进入了终态，要么至少需要进一步的处理。
  *   States >= S_SELF are either final, or at least require special action.
+ *
  *   In 'fsm' there is a line for each state X charset X nextstate.
  *   List chars that overwrite previous entries later (e.g. C_ALPH
  *   can be overridden by '_' by a later entry; and C_XX is the
  *   the universal set, and should always be first.
+ *
+ *   那些高于S_SELF的状态，在大表(bigfsm)中呈现的是负值。
  *   States above S_SELF are represented in the big table as negative values.
+ *
+ *   S_SELF和S_SELFB将终态token的类型编码在高位中（高9位）。
  *   S_SELF and S_SELFB encode the resulting token type in the upper bits.
- *   These actions differ in that S_SELF doesn't have a lookahead char,
- *   S_SELFB does.
+ *
+ *   S_SELF和S_SELFB的区别在于:S_SELF没有lookahead字符,而S_SELFB有lookahead字符.
+ *   These actions differ in that S_SELF doesn't have a lookahead char,S_SELFB does.
  *
  *   The encoding is blown out into a big table for time-efficiency.
  *   Entries have
@@ -26,66 +33,66 @@
  */
 
 #define		MAXSTATE		32				/* 最大的状态  */
-#define		ACT(tok,act)	((tok<<7)+act)
-#define		QBSBIT			0100
-#define		GETACT(st)		(st>>7)&0x1ff
+#define		ACT(tok,act)	((tok<<7)+act)	/* 合成ACT(tok是toktype类型,占据高9位;act是action,类型是emun state) */
+#define		QBSBIT			0100			/* 8进制，因此是第7位 */
+#define		GETACT(st)		(st>>7)&0x1ff	/* 得到ACT(ACT其实就是一个token)，过滤出16位中的高9位 */
 
 /* 字符类(character classes) */
 #define		C_WS	1	/* 空白符(white space) */
 #define		C_ALPH	2	/* 字母(Alpha),注意: 下划线也是字母 */
 #define		C_NUM	3	/* 数字(Number) */
 #define		C_EOF	4	/* 文件结束符(End Of File) */
-#define		C_XX	5	/* TODO: 随机字符 */
+#define		C_XX	5	/* 随机字符 */
 
 /* 状态集合 */
 enum state {
-	START=0,
-	NUM1,
-	NUM2,
-	NUM3, 	/* 浮点数状态 */
-	ID1,	/* 标识符状态 */
-	ST1,	/* 宽字符状态 */
-	ST2,
-	ST3,
-	COM1,
-	COM2,
-	COM3,
-	COM4,
-	CC1,
-	CC2,
+	START=0,/* 开始状态 */
+	NUM1,	/* 阿拉伯数字状态( [0-9] ) */
+	NUM2,	/* 浮点指数状态('e' or 'E') */
+	NUM3, 	/* 浮点小数状态('.') */
+	ID1,	/* 标识符状态( [a-zA-Z_] ) */
+	ST1,	/* 宽字符状态('L') */
+	ST2,	/* 双引号字符串状态( '"' ) */
+	ST3,	/* 字符串转义状态( '\\' ) */
+	COM1,	/* C注释状态1 ( '/' ) */
+	COM2,	/* C注释状态2 ( "*" ) */
+	COM3,	/* C注释状态3 ( "*" ) */
+	COM4,	/* C++单行注释状态 ( // ) */
+	CC1,	/* 单引号字符常量状态('\'') */
+	CC2,	/* 字符常量转义状态( '\\' ) */
 	WS1,	/* 空白符状态. ' '空格;'\t'横向制表符;'\v'纵向制表符 */
-	PLUS1,
-	MINUS1,
-	STAR1,
-	SLASH1,
-	PCT1,
-	SHARP1,
-	CIRC1,
-	GT1,
-	GT2,
-	LT1,
-	LT2,
-	OR1,
-	AND1,
-	ASG1,
-	NOT1,
-	DOTS1,
-	S_SELF=MAXSTATE,
-	S_SELFB,
-	S_EOF,
-	S_NL,
-	S_EOFSTR,
-	S_STNL,
-	S_COMNL,
-	S_EOFCOM,
-	S_COMMENT,
-	S_EOB,
-	S_WS,
-	S_NAME
+	PLUS1,	/* 加号状态('+') */
+	MINUS1,	/* 减号状态('-') */
+	STAR1,	/* 星号字符状态('*') */
+	SLASH1,	/* TODO: 这个状态没在其他地方被引用... */
+	PCT1,	/* '%' 百分号字符状态 */
+	SHARP1, /* '#' Sharp字符状态 */
+	CIRC1,	/* 脱字符('^',Caret)状态 */
+	GT1,	/* '>' 大于号状态 */
+	GT2,	/* 右移运算符状态( >> ) */
+	LT1,	/* 小于号状态('<') */
+	LT2,	/* 左移运算符状态( << )   */
+	OR1,	/* 或状态('|') */
+	AND1,	/* 与状态('&') */
+	ASG1,	/* 赋值符号状态('=') */
+	NOT1,	/* 逻辑非状态('!') */
+	DOTS1,	/* 成员运算符状态 ( '.' ) */
+	S_SELF=MAXSTATE, /* 接受状态,不需要再lookahead字符 */
+	S_SELFB, /* 接受状态,需要进一步lookahead字符 */
+	S_EOF,	/* 文件结束状态(接受状态) */
+	S_NL,	/* 换行状态(接受状态) */
+	S_EOFSTR, /* 字符串(或字符常量)中出现了文件结束符的状态(接受状态,非法状态) */
+	S_STNL, /* 字符串(或字符常量)中出现了换行符的状态(接受状态,非法状态) */
+	S_COMNL, /* C注释中出现换行符.NOTE: C注释是允许跨行的(接受状态) */
+	S_EOFCOM, /* C注释（或C++注释）中遇到了文件结束符后的状态(接受状态，非法状态) */
+	S_COMMENT, /* C注释被接受的状态 */
+	S_EOB,	/* End Of Buffer 状态 */
+	S_WS,	/* 空白字符被接受状态 */
+	S_NAME	/* 标识符被接受状态 */
 };
 
-int	tottok;
-int	tokkind[256];
+int	tottok; /* TODO: 这个变量在工程中没被使用... */
+int	tokkind[256]; /* TODO: 这个变量在工程中没被使用... */
 
 /**
  * fsm - 有限状态机(finite state machine)
@@ -96,8 +103,11 @@ struct	fsm {
 	int	nextstate;		/* 进入nextstate,TODO: 什么是 +ve ? (enter this state if +ve) */
 };
 
+/**
+ * 有ACT的nextstate基本都是接受状态，开始有ACTION了
+ */
 /*const*/ struct fsm fsm[] = {
-	/* start state */
+	/* 开始状态 */
 	START,	{ C_XX },	ACT(UNCLASS,S_SELF),
 	START,	{ ' ', '\t', '\v' },	WS1,
 	START,	{ C_NUM },	NUM1,
@@ -133,7 +143,7 @@ struct	fsm {
 	START,	{ '~' },	ACT(TILDE,S_SELF),
 	START,	{ '^' },	CIRC1,
 
-	/* saw a digit */
+	/* 看见一个数字 */
 	NUM1,	{ C_XX },	ACT(NUMBER,S_SELFB),
 	NUM1,	{ C_NUM, C_ALPH, '.' },	NUM1,
 	NUM1,	{ 'E', 'e' },	NUM2,
@@ -284,35 +294,71 @@ struct	fsm {
  */
 short	bigfsm[256][MAXSTATE];
 
+#ifdef DEBUG_FSM
+void print_fsm(struct fsm ar[],int n) {
+	int i,j;
+	for(i=0;i<n;i++) {
+		printf("state=%02d,",ar[i].state);
+		printf("ch[4]:");
+		for(j=0;j<4;j++) {
+			if(ar[i].ch[j]>=32 && ar[i].ch[j]<128) {
+				printf("  '%c'",ar[i].ch[j]);
+			} else {
+				printf(" 0x%02x",ar[i].ch[j]);
+			}
+		}
+		printf(", nextstate = 0x%04x\n",(unsigned short)(ar[i].nextstate));
+	}
+}
+
+void print_bigfsm() {
+	int i,j;
+	printf("bigfsm:\n");
+	for(i=0; i<256;i++) {
+		printf("%3d:",i);
+		for(j=0;j<32;j++) {
+			if(j%10==0)
+			printf("[%d]",j);
+			printf("%04x,",(unsigned short)bigfsm[i][j]);
+		}
+		printf("\n");
+	}
+}
+#endif /* DEBUG_FSM */
+
 /**
- * expandlex - 初始化状态机
- * TODO: 需要仔细研究...
+ * expandlex - 展开状态机
  */
 void expandlex(void)
 {
 	/*const*/ struct fsm *fp;
 	int i, j, nstate;
 
-	for (fp = fsm; fp->state>=0; fp++) {
-		for (i=0; fp->ch[i]; i++) {
-			nstate = fp->nextstate;
-			if (nstate >= S_SELF)
-				nstate = ~nstate;
+#ifdef TEST_LCPP
+	print_fsm(fsm,sizeof(fsm)/sizeof(fsm[0]));
+	exit(0);
+#endif
+
+	for (fp = fsm; fp->state>=0; fp++) { /* 对于任意大于0的状态 */
+		for (i=0; fp->ch[i]; i++) { /* 如果其下一字符不为0 */
+			nstate = fp->nextstate; /* 获取到它的下一状态 */
+			if (nstate >= S_SELF) /* 如果下一状态的值大于S_SELF（说明是接受状态或非法状态） */
+				nstate = ~nstate; /* 对下一状态按位取反（取反后，第7位由0变成了1）。为啥要取反？答曰：可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。 */
 			switch (fp->ch[i]) {
 
-			case C_XX:		/* random characters */
+			case C_XX:		/* 如果下一字符是随机（任一）字符 */
 				for (j=0; j<256; j++)
-					bigfsm[j][fp->state] = nstate;
+					bigfsm[j][fp->state] = nstate;	/* 设置当前状态遇到任意字符后从fp->state跳转到nstate */
 				continue;
-			case C_ALPH:
+			case C_ALPH:	/* 如果下一字符是字母或下划线 */
 				for (j=0; j<=256; j++)
 					if ('a'<=j&&j<='z' || 'A'<=j&&j<='Z'
 					  || j=='_')
-						bigfsm[j][fp->state] = nstate;
+						bigfsm[j][fp->state] = nstate; /* 设置当前状态，遇到字母或下划线后从fp->state跳转到nstate */
 				continue;
-			case C_NUM:
+			case C_NUM: /* 如果下一字符是阿拉伯数字 */
 				for (j='0'; j<='9'; j++)
-					bigfsm[j][fp->state] = nstate;
+					bigfsm[j][fp->state] = nstate; /* 设置当前状态，遇到阿拉伯数字后从状态fp->state跳转道nstate */
 				continue;
 			default:
 				bigfsm[fp->ch[i]][fp->state] = nstate;
@@ -326,39 +372,32 @@ void expandlex(void)
 	 *  runes(古日尔曼字母),
 	 *  and EOB (end of input buffer)
 	 */
-	for (i=0; i < MAXSTATE; i++) {
-		for (j=0; j<0xFF; j++)
-			if (j=='?' || j=='\\') {
-				if (bigfsm[j][i]>0)
-					bigfsm[j][i] = ~bigfsm[j][i];
-				bigfsm[j][i] &= ~QBSBIT;
+	for (i=0; i < MAXSTATE; i++) { /* 对于每一状态i */
+		for (j=0; j<0xFF; j++) /* 对于每一行（每一字符j） */
+			if (j=='?' || j=='\\') { /* 如果该字符是'?'或'\\' */
+				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的下一状态大于0（说明是非接受状态，而且第7位是0） */
+					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“下一状态”各位按位取反（将该“下一状态”变成接受状态，而且第7位从0变成了1） */
+				bigfsm[j][i] &= ~QBSBIT; /* 将该“下一状态”的第7位清0。 */
 			}
-		bigfsm[EOB][i] = ~S_EOB;
-		if (bigfsm[EOFC][i]>=0)
-			bigfsm[EOFC][i] = ~S_EOF;
+		bigfsm[EOB][i] = ~S_EOB; /* 状态i的下一字符是EOB，将S_EOB取反。取反后，第7位为1 */
+		if (bigfsm[EOFC][i]>=0) /* 如果状态i对应于字符EOFC的状态大于0 */
+			bigfsm[EOFC][i] = ~S_EOF; /* 将S_EOF取反。取反后，第7位为0 */
 	}
-//	/* debug: print bigfsm */
-//	printf("bigfsm:\n");
-//	for(i=0; i<256;i++) {
-//		printf("%3d:",i);
-//		for(j=0;j<32;j++) {
-//			if(j%10==0)
-//				printf("[%d]",j);
-//			printf("%04x,",(unsigned short)bigfsm[i][j]);
-//		}
-//		printf("\n");
-//	}
-//	exit(1);
+	/* 综上：第7位实际上起到了判断一个状态是否是接受状态的标识位。如果第7位为1,接受状态;反之，若为0,非接受状态。 */
+#ifdef DEBUG_FSM
+	print_bigfsm();
+	exit(1);
+#endif
 }
 
 /**
- * fixlex - 添加c++的单行注释功能
+ * fixlex - 添加C++的单行注释功能
  */
 void fixlex(void)
 {
 	/* do C++ comments? */
-	if (Cplusplus==0)
-		bigfsm['/'][COM1] = bigfsm['x'][COM1];
+	if (Cplusplus==0) /* 如果没有开启C++注释支持 */
+		bigfsm['/'][COM1] = bigfsm['x'][COM1]; /* 那么只是简单的把C++注释当作除法运算符 */
 }
 
 /**

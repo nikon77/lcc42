@@ -23,61 +23,61 @@ typedef unsigned char uchar;
  */
 enum toktype {
 	END,
-	UNCLASS,
-	NAME,
-	NUMBER,
-	STRING,
+	UNCLASS,	/* 未归类，unclass，token */
+	NAME,	/* 标识符名，identified name，token */
+	NUMBER,	/* 数字，number，token */
+	STRING,	/* 字符串，string，token */
 	CCON,
 	NL,
 	WS,
-	DSHARP,
-	EQ,
-	NEQ,
-	LEQ,
-	GEQ,
-	LSH,
-	RSH,
-	LAND,
-	LOR,
-	PPLUS,
-	MMINUS,
-	ARROW,
-	SBRA,
-	SKET,
-	LP,
-	RP,
-	DOT,
-	AND,
-	STAR,
-	PLUS,
-	MINUS,
-	TILDE,
-	NOT,
-	SLASH,
-	PCT,
-	LT,
-	GT,
-	CIRC,
-	OR,
-	QUEST,
-	COLON,
-	ASGN,
-	COMMA,
-	SHARP,
-	SEMIC,
-	CBRA,
-	CKET,
-	ASPLUS,
-	ASMINUS,
-	ASSTAR,
-	ASSLASH,
-	ASPCT,
-	ASCIRC,
-	ASLSH,
-	ASRSH,
-	ASOR,
-	ASAND,
-	ELLIPS,
+	DSHARP,	/* 粘贴字符（ ## ），double sharp，token */
+	EQ,		/* 相等运算符（ == ），equal，token */
+	NEQ,	/* 不相等运算符（ != ），not equal，token */
+	LEQ,	/* 小于等于运算符（ <= ），less equal，token */
+	GEQ,	/* 大于等于运算符（ >= ），greater than，token */
+	LSH,	/* 左移运算符（ << ），left shift，token */
+	RSH,	/* 右移运算符（ >> ），right shift，token */
+	LAND,	/* 逻辑与运算符（ && ），logic and，token */
+	LOR,	/* 逻辑或运算符（ || ），logic or，token */
+	PPLUS,	/* 自加运算符（ ++ ），plus plus，token */
+	MMINUS,	/* 自减符( -- )，minus minus，token */
+	ARROW,	/* 指向结构体成员运算符，arrow，token */
+	SBRA,	/* 左方括号（ [ ），left bracket，token */
+	SKET,	/* 右方括号（ ] ），right bracket，token */
+	LP,		/* 左圆括号（ ( ），left parenthesis，token */
+	RP,		/* 右圆括号（ ) ），right parenthesis，token */
+	DOT,	/* 句点（ . ），dot，token */
+	AND,	/* 按位与运算（ & ），bit and，token */
+	STAR,	/* 星号字符（ * ），star，token */
+	PLUS,	/* 加号（ + ），plus，token */
+	MINUS,	/* 减号（ - ），minus，token */
+	TILDE,	/* 波浪号（ ~ ），tilde，token */
+	NOT,	/* 逻辑非（ ! ），logic not，token */
+	SLASH,	/* 除法运算符（ / ），slash，token */
+	PCT,	/* 求模运算符（ % ），percentage，token */
+	LT,	/* 小于（ < ），less than，token */
+	GT,	/* 大于（ > ），greater than，token */
+	CIRC, /* 异或运算符，也称"闭环加法"或"本位加法"运算符（ ^ ），circ，token */
+	OR,	/* 按位或运算符（ | ），bit or，token */
+	QUEST,	/* 问号（ ? ），question mark，token */
+	COLON,	/* 冒号（ : ），colon，token */
+	ASGN,	/* 赋值（ = ），assign，token */
+	COMMA,	/* 逗号（ , ），comma，token */
+	SHARP,	/* 井字符（ '#' ），sharp，token */
+	SEMIC,	/* 分号（ ; ），semicolon，token */
+	CBRA,	/* 左花括号（ { ），left curly bracket，token */
+	CKET,	/* 右花括号（ } ），right curly bracket，token */
+	ASPLUS,	/* 加赋值运算符（ += ），assign plus，token */
+	ASMINUS,/* 减赋值运算符（ -= ），assign minus，token */
+	ASSTAR,	/* 乘赋值运算符（ *= ），assign star，token */
+	ASSLASH, /* 除赋值运算符（ /= ），assign slash，token */
+	ASPCT,	/* 求模赋值运算符（ %= ），assign percentage，token */
+	ASCIRC, /* 按位异或赋值运算符（ ^= ），assign circ，token */
+	ASLSH,	/* 左移赋值运算符（ <<= ），assign left shift，token */
+	ASRSH,	/* 右移赋值运算符（ >>= ），assign right shift，token */
+	ASOR,	/* 按位或赋值运算符（ |= ），assign bit or，token */
+	ASAND,	/* 按位与赋值运算符（ &= ），assign bit and，token */
+	ELLIPS,	/* 可变参数，ellipses argument，token */
 	DSHARP1,
 	NAME1,
 	DEFINED,

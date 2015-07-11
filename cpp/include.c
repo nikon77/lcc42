@@ -7,8 +7,7 @@ Includelist	includelist[NINCLUDE]; /* 头文件包含目录列表(数组) */
 
 extern char	*objname;
 
-void
-doinclude(Tokenrow *trp)
+void doinclude(Tokenrow *trp)
 {
 	char fname[256], iname[256];
 	Includelist *ip;
@@ -84,8 +83,7 @@ syntax:
 /*
  * Generate a line directive for cursource
  */
-void
-genline(void)
+void genline(void)
 {
 	static Token ta = { UNCLASS };
 	static Tokenrow tr = { &ta, &ta, &ta+1, 1 };
@@ -105,15 +103,14 @@ genline(void)
 	puttokens(&tr);
 }
 
-void
-setobjname(char *f)
+void setobjname(char *f)
 {
 	int n = strlen(f);
 	objname = (char*)domalloc(n+5);
 	strcpy(objname,f);
 	if(objname[n-2]=='.'){
 		strcpy(objname+n-1,"$O: ");
-	}else{
+	} else {
 		strcpy(objname+n,"$O: ");
 	}
 }
