@@ -80,7 +80,8 @@ syntax:
 	return;
 }
 
-/*
+/**
+ * 为当前输入源产生一个行控制指令信息
  * Generate a line directive for cursource
  */
 void genline(void)
@@ -90,17 +91,17 @@ void genline(void)
 	uchar *p;
 
 	ta.t = p = (uchar*)outp;
-	strcpy((char*)p, "#line ");
+	strcpy((char*)p, "#line "); /* 将“#line ”复制输出缓冲区 */
 	p += sizeof("#line ")-1;
-	p = (uchar*)outnum((char*)p, cursource->line);
+	p = (uchar*)outnum((char*)p, cursource->line); /* 输出当前文件的行号 */
 	*p++ = ' '; *p++ = '"';
-	strcpy((char*)p, cursource->filename);
+	strcpy((char*)p, cursource->filename); /* 输出当前文件的文件名 */
 	p += strlen((char*)p);
 	*p++ = '"'; *p++ = '\n';
 	ta.len = (char*)p-outp;
-	outp = (char*)p;
-	tr.tp = tr.bp;
-	puttokens(&tr);
+	outp = (char*)p; /* 更新输出缓冲区的当前指针 */
+	tr.tp = tr.bp;	/* 将当前token设置为token row中的第一个token的首地址,以便接下来调用puttokens函数输出token row */
+	puttokens(&tr); /* 输出 token row */
 }
 
 void setobjname(char *f)
@@ -108,9 +109,9 @@ void setobjname(char *f)
 	int n = strlen(f);
 	objname = (char*)domalloc(n+5);
 	strcpy(objname,f);
-	if(objname[n-2]=='.'){
-		strcpy(objname+n-1,"$O: ");
-	} else {
-		strcpy(objname+n,"$O: ");
+	if(objname[n-2]=='.') { /* 如果是filename.c */
+		strcpy(objname+n-1,"o: "); /* 则变成filename.o */
+	} else { /* 如果是filename(没有扩展名...) */
+		strcpy(objname+n,"obj: ");
 	}
 }

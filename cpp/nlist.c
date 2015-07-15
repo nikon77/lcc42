@@ -41,14 +41,13 @@ struct	kwtab {
 	NULL
 };
 
-unsigned long	namebit[077+1];
-Nlist 	*np;
+unsigned long	namebit[077+1]; /* 共有64个long型。TODO：这个数组到底是干啥的？ */
+Nlist 	*np; /* TODO: 工程中没有任何地方引用这个变量... */
 
 /**
  * setup_kwtab - 安装关键字hash表
  */
-void setup_kwtab(void)
-{
+void setup_kwtab(void) {
 	struct kwtab *kp;
 	Nlist *np;
 	Token t;
@@ -58,51 +57,50 @@ void setup_kwtab(void)
 	for (kp=kwtab; kp->kw; kp++) { /* 遍历kwtab */
 		t.t = (uchar*)kp->kw;	/* 拿到关键字的字符串 */
 		t.len = strlen(kp->kw);	/* 得到关键字字符串的长度 */
-		np = lookup(&t, 1);		/* 将关键字插入hash表 */
+		np = lookup(&t, 1);		/* 将关键字插入hash表（注意：是将Token结构转化为Nlist结构，存储到hash表中的） */
 		np->flag = kp->flag;	/* 设置hash表节点中关键字的flag */
 		np->val = kp->val;		/* 设置hash表节点中关键字的val */
 		if (np->val == KDEFINED) { /* 如果是defined关键字 */
-			kwdefined = np;
-			np->val = NAME;
-			np->vp = &deftr;
-			np->ap = 0;
+			kwdefined = np;	/* 使kwdefined指向defined关键字的Nlist结构首地址 */
+			np->val = NAME; /* 设置为：标识符名，token */
+			np->vp = &deftr; /* np->vp指向defined关键字的宏展开的值 */
+			np->ap = 0; /* 设置参数名的列表暂时为0 */
 		}
 	}
 }
 
 /**
- * lookup - 在hash表中查找token或将token插入hash表
+ * lookup - 在hash表中查找token或将token（转化为Nlist结构）插入到hash表
  * @install: 当install=0时，表示查询hash表;当install=1时，表示将token插入hash表
  */
-Nlist * lookup(Token *tp, int install)
-{
-	unsigned int h;
+Nlist * lookup(Token *tp, int install) {
+	unsigned int h;	/* 存储字符串的hash值 */
 	Nlist *np;
-	uchar *cp, *cpe; /* cp指向字符串的开始;cpe指向字符串的结尾的空字符 */
+	uchar *cp, *cpe; /* cp指向字符串的开始;cpe指向字符串的结尾 */
 
-	h = 0;
+	h = 0; /* 令hash值初值为0 */
 	for (cp=tp->t, cpe=cp+tp->len; cp<cpe; )
 		h += *cp++; /* 通过字符值累加来获取字符串的hash值 */
-	h %= NLSIZE; /* 拿着这个hash值对128求模，获得hash桶的索引 */
-	np = nlist[h]; /* 获取了某个hash桶中链表的表头 */
-	while (np) { /* 在hash表中查找名为 tp->t 的节点 */
+	h %= NLSIZE; /* 拿着这个hash值对NLSIZE求模，获得hash桶的索引 */
+	np = nlist[h]; /* 获取hash桶中索引为h的链表的表头 */
+	while (np) { /* 在该链表中查找名为 tp->t 的节点 */
 		if ( *tp->t==*np->name && tp->len==np->len
-		 && strncmp((char*)tp->t, (char*)np->name, tp->len)==0 )
-			return np; /* 如果在hash表中找到同名的token，直接返回此节点 */
-		np = np->next;
+		 && strncmp((char*)tp->t, (char*)np->name, tp->len)==0 ) /* 如果链表中当前节点的字串和待查找的字串相同 */
+			return np; /* 那么直接返回此节点的首地址 */
+		np = np->next; /* 继续查找链表中的下一元素 */
 	}
-	if (install) { /* 如果之前在hash表中没找到此节点且 install != 0 那么将该token插入hash表 */
-		np = new(Nlist);
-		np->vp = NULL;
+	if (install) { /* 如果之前在hash表中没找到此节点且 install != 0 那么将该Token结构转化为Nlist结构插入hash表中 */
+		np = new(Nlist); /* 分配一个Nlist结构 */
+		np->vp = NULL; /* 初始化该Nlist结构 */
 		np->ap = NULL;
 		np->flag = 0;
 		np->val = 0;
-		np->len = tp->len;
-		np->name = newstring(tp->t, tp->len, 0);
-		np->next = nlist[h]; /* 这个hash表是个单向链表 */
+		np->len = tp->len; /* 将字串长度保存到Nlist结构中 */
+		np->name = newstring(tp->t, tp->len, 0); /* 将字串拷贝一份备份到Nlist结构中 */
+		np->next = nlist[h]; /* 将Nlist结构插入到索引为h的链表中 */
 		nlist[h] = np;
-		quickset(tp->t[0], tp->len>1? tp->t[1]:0); /* XXX:注意，这里不是逗号表达式，quickset是个宏！ */
-		return np;
+		quickset(tp->t[0], tp->len>1? tp->t[1]:0); /* XXX:注意，这里不是逗号表达式，quickset是个宏！TODO: namebit到底是干啥的？ */
+		return np; /* 返回新插入的Nlist节点的首地址 */
 	}
-	return NULL; /* 如果之前在hash表中没找到此节点且install为0,那么返回NULL，说明没找到 */
+	return NULL; /* 如果之前在hash表中没找到此节点且install参数为0,那么返回NULL，说明没找到 */
 }

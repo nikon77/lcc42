@@ -35,7 +35,7 @@
 #define		MAXSTATE		32				/* 最大的状态  */
 #define		ACT(tok,act)	((tok<<7)+act)	/* 合成ACT(tok是toktype类型,占据高9位;act是action,类型是emun state) */
 #define		QBSBIT			0100			/* 8进制，因此是第7位 */
-#define		GETACT(st)		(st>>7)&0x1ff	/* 得到ACT(ACT其实就是一个token)，过滤出16位中的高9位 */
+#define		GETACT(st)		(st>>7)&0x1ff	/* 得到ACT(ACT其实就是一个tokentype)，过滤出16位中的高9位 */
 
 /* 字符类(character classes) */
 #define		C_WS	1	/* 空白符(white space) */
@@ -67,7 +67,7 @@ enum state {
 	SLASH1,	/* TODO: 这个状态没在其他地方被引用... */
 	PCT1,	/* '%' 百分号字符状态 */
 	SHARP1, /* '#' Sharp字符状态 */
-	CIRC1,	/* 脱字符('^',Caret)状态 */
+	CIRC1,	/* 脱字符( '^',Caret or Circ )状态 */
 	GT1,	/* '>' 大于号状态 */
 	GT2,	/* 右移运算符状态( >> ) */
 	LT1,	/* 小于号状态('<') */
@@ -329,21 +329,20 @@ void print_bigfsm() {
 /**
  * expandlex - 展开状态机
  */
-void expandlex(void)
-{
+void expandlex(void) {
 	/*const*/ struct fsm *fp;
 	int i, j, nstate;
 
-#ifdef TEST_LCPP
+#ifdef DEBUG_FSM
 	print_fsm(fsm,sizeof(fsm)/sizeof(fsm[0]));
 	exit(0);
 #endif
 
-	for (fp = fsm; fp->state>=0; fp++) { /* 对于任意大于0的状态 */
+	for (fp = fsm; fp->state>=0; fp++) { /* 对任意非负的状态 */
 		for (i=0; fp->ch[i]; i++) { /* 如果其下一字符不为0 */
 			nstate = fp->nextstate; /* 获取到它的下一状态(迁移状态) */
 			if (nstate >= S_SELF) /* 如果下一状态的值大于S_SELF（说明是接受状态或非法状态） */
-				nstate = ~nstate; /* 对下一状态按位取反（取反后，第7位由0变成了1）。为啥要取反？答曰：可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。 */
+				nstate = ~nstate; /* 对下一状态按位取反。为啥要取反？答曰：可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。（取反后，第7位由0变成了1） */
 			switch (fp->ch[i]) {
 
 			case C_XX:		/* 如果下一字符是随机（任一）字符 */
@@ -375,21 +374,21 @@ void expandlex(void)
 	for (i=0; i < MAXSTATE; i++) { /* 对于每一状态i */
 		for (j=0; j<0xFF; j++) /* 查看该状态i的下一字符j */
 			if (j=='?' || j=='\\') { /* 如果该字符是'?'或'\\' */
-				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的迁移状态大于0（说明是非接受状态，而且第7位是0） */
-					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“下一状态”各位按位取反,取反后该值小于0（将该“下一状态”变成接受状态，而且第7位从0变成了1） */
-				bigfsm[j][i] &= ~QBSBIT; /* 将该“迁移状态”的第7位清0 */
+				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的迁移状态大于0（说明不是接受状态也不是非法状态，此时第7位是0，低6位小于32） */
+					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“迁移状态”各位按位取反,取反后该值最高位为1（即小于0）（将该“迁移状态”变成了需要做特殊处理的非法状态），而且第7位从0变成了1） */
+				bigfsm[j][i] &= ~QBSBIT; /* 再将该“迁移状态”的第7位清0 */
 			}
-		bigfsm[EOB][i] = ~S_EOB; /* 将状态i对应于字符EOB的迁移状态设置为S_EOB的取反（取反后，第7位为1） */
-		if (bigfsm[EOFC][i]>=0) /* 如果状态i对应于字符EOFC的状态大于0 */
-			bigfsm[EOFC][i] = ~S_EOF; /* 将S_EOF取反。取反后，第7位为0 */
+		bigfsm[EOB][i] = ~S_EOB; /* 将状态i对应于字符EOB的迁移状态设置为S_EOB的取反（取反后，最高位为1,第7位为1） */
+		if (bigfsm[EOFC][i] >= 0) /* 如果状态i对应于字符EOFC的迁移状态大于0 */
+			bigfsm[EOFC][i] = ~S_EOF; /* 将S_EOF取反（取反后，第7位为1,最高位为1） */
 	}
 	/**
-	 * 综上：nextstate的第7位和最高位（判断nextstate是正值还是负值）构成了4种情况的判断依据：
-	 * nextstate ：       msb（master significant bit）
+	 * 综上：bigfsm数组中每个元素的第7位（从最低位开始数）和最高位（most significant bit）构成以下了4种情况：
+	 *   bit7    ：       MSB（most significant bit）
 	 *    0      ：        0		正常的状态变迁
-	 *    0      ：        1		接受状态，借机处理三字符序列，续行符，古日尔曼字母，EOFC
-	 *    1      ：        0		遇到EOB
-	 *    1      ：        1		接受状态 或 非法状态
+	 *    0      ：        1		“非法状态”，借机处理三字符序列，续行符，古日尔曼字母
+	 *    1      ：        0    接受状态（一般的 接受状态 和 lookahead C_XX的接受状态）
+	 *    1      ：        1		处理EOF 和 EOB
 	 */
 #ifdef DEBUG_FSM
 	print_bigfsm();
@@ -398,10 +397,9 @@ void expandlex(void)
 }
 
 /**
- * fixlex - 添加C++的单行注释功能
+ * fixlex - 关闭C++的单行注释功能
  */
-void fixlex(void)
-{
+void fixlex(void) {
 	/* do C++ comments? */
 	if ( Cplusplus == 0 ) /* 如果没有开启C++注释支持 */
 		bigfsm['/'][COM1] = bigfsm['x'][COM1]; /* 那么只是简单的把C++注释当作除法运算符 */
@@ -418,56 +416,56 @@ void fixlex(void)
  * The value is a flag indicating that possible macros have
  * been seen in the row.
  */
-int gettokens(Tokenrow *trp, int reset)
-{
+int gettokens(Tokenrow *trp, int reset) {
 	register int c, state, oldstate;
-	register uchar *ip;
-	register Token *tp, *maxp;
-	int runelen;
-	Source *s = cursource; /* 从当前输入源得到token */
+	register uchar *ip;		/* 输入源缓冲区中当前正在处理的字符的首地址 */
+	register Token *tp;		/* Tokenrow中的当前Token的pointer */
+	register Token *maxp;	/* Tokenrow中Token数组的最后一个元素的下一元素的首地址 */
+	int runelen;			/* TODO: 日尔曼字符的长度？ */
+	Source *s = cursource;	/* 获得当前输入源栈顶节点的首地址 */
 	int nmac = 0;
 	extern char outbuf[];
 
-	tp = trp->lp; /* 拿到token row中第一个token结构的首地址 */
+	tp = trp->lp; /* 拿到当前token row中有效数据的下一节点的首地址 */
 	ip = s->inp; /* 拿到输入源缓冲区中当前正在处理的字符的首地址 */
-	if (reset) { /* 如果如果缓冲区可以被“重绕” */
-		s->lineinc = 0; /* TODO:  */
-		if (ip>=s->inl) { /* 如果缓冲区中无数据 */
-			s->inl = s->inb;
+	if (reset) { /* 如果缓冲区可以被“重绕” */
+		s->lineinc = 0; /* 为续行符做调整 */
+		if (ip >= s->inl) { /* 如果缓冲区中无数据 */
+			s->inl = s->inb; /* 设置输入源缓冲区的当前指针为缓冲区的基地址 */
 			fillbuf(s); /* 从输入源加载数据到缓冲区中 */
-			ip = s->inp = s->inb;
+			ip = s->inp = s->inb; /* 设置ip重新指向缓冲区的基地址 */
 		} else if (ip >= s->inb+(3*INS/4)) { /* 如果缓冲区中有数据，但当前指针已经超过了buffer大小的3/4,那么开始“重绕” */
-			memmove(s->inb, ip, 4+s->inl-ip); /* 将缓冲区中的有效数据复制到缓冲区开始 */
+			memmove(s->inb, ip, 4+s->inl-ip); /* 将缓冲区中还未扫描到的剩余有效数据复制到缓冲区开始 */
 			s->inl = s->inb+(s->inl-ip); /* 重新设置缓冲区末尾指针 */
 			ip = s->inp = s->inb; /* 重新设置缓冲区开始指针和当前指针 */
 		}
 	}
-	maxp = &trp->bp[trp->max]; /* 拿到token row最后一个元素的下一个元素的首地址(哨兵地址） */
-	runelen = 1;
+	maxp = &trp->bp[trp->max]; /* 拿到Tokenrow最后一个元素的下一个元素的首地址(哨兵地址） */
+	runelen = 1; /* TODO: 日尔曼字符? */
 	for (;;) {
 	   continue2:
-		if (tp>=maxp) {
-			trp->lp = tp;
+		if (tp >= maxp) {
+			trp->lp = tp; /* 保存当前token */
 			tp = growtokenrow(trp);
 			maxp = &trp->bp[trp->max];
 		}
-		tp->type = UNCLASS;
-		tp->hideset = 0;
+		tp->type = UNCLASS; /* 初始为未归类的token type */
+		tp->hideset = 0; /* TODO: 什么是hideset？ */
 		tp->t = ip;
 		tp->wslen = 0;
 		tp->flag = 0;
-		state = START;
+		state = START;	/* 设置当前状态为START */
 		for (;;) {
-			oldstate = state;
-			c = *ip;
-			if ((state = bigfsm[c][state]) >= 0) {
-				ip += runelen;
+			oldstate = state; /* 将当前状态保存到oldstate中 */
+			c = *ip; /* 从输入源缓冲区取出一个字符 */
+			if ((state = bigfsm[c][state]) >= 0) { /* 如果迁移状态不为接受状态 */
+				ip += runelen; /* ip指向缓冲区中下一字符 */
 				runelen = 1;
-				continue;
+				continue; /* 开始下一循环 */
 			}
-			state = ~state;
+			state = ~state; /* 此时的state是接受状态,对其取反后还原为原来的ACT合成的 tokentype（高9位）+接受状态（低7位）的形式 */
 		reswitch:
-			switch (state&0177) {
+			switch (state&0177) { /* 从state中过滤出接受状态 */
 			case S_SELF:
 				ip += runelen;
 				runelen = 1;
@@ -635,11 +633,11 @@ int fillbuf(Source *s)
 {
 	int n, nr;
 
-	nr = INS/8;
-	if ((char *)s->inl+nr > (char *)s->inb+INS)
-		error(FATAL, "Input buffer overflow");
-	if (s->fd==NULL || (n=fread((char *)s->inl, 1, INS/8, s->fd)) <= 0)
-		n = 0;
+	nr = INS/8; /* 缓冲区大小的1/8 */
+	if ((char *)s->inl+nr > (char *)s->inb+INS) /* 若缓冲区的可用空间小于缓冲区容量的1/8 */
+		error(FATAL, "Input buffer overflow"); /* 则打印错误信息，并结束进程 */
+	if (s->fd==NULL || (n=fread((char *)s->inl, 1, INS/8, s->fd)) <= 0) /* 读取INS/8个字节到缓冲区中（s->fd不为NULL时才调用fread） */
+		n = 0; /* 如果读取失败（fread返回值<=0）那么设置读取的字节数n为0 */
 	if ((*s->inp&0xff) == EOB) /* sentinel character appears in input */
 		*s->inp = EOFC;
 	s->inl += n;
@@ -652,7 +650,7 @@ int fillbuf(Source *s)
 }
 
 /**
- * setsource - 设置输入源
+ * setsource - 在输入源栈的栈顶添加一个新的输入源节点
  * @name：输入源的文件名
  * @fd：输入源的文件指针
  * @str：预先往输入源中放置的待处理的字符串
@@ -664,29 +662,29 @@ int fillbuf(Source *s)
 Source * setsource(char *name, FILE *fd, char *str)
 {
 	Source *s = new(Source);
-	int len;
+	int len; /* 如果str不为空，那么len为str的长度;否则，len为0 */
 
 	s->line = 1; /* 设置当前行号为1 */
-	s->lineinc = 0; /* TODO: 啥意思？ */
+	s->lineinc = 0; /* 为续行符作调整 */
 	s->fd = fd;	/* 设置source的文件指针 */
 	s->filename = name; /* 设置文件的名字 */
-	s->next = cursource; /* 头插法插入节点（此链表是一个单向链表） */
+	s->next = cursource; /* 头插法插入节点（此链表是一个栈） */
 	s->ifdepth = 0; /* 条件编译指令的陷入深度 */
 	cursource = s;  /* 设置当前源为新分配的节点 */
 	/* slop at right for EOB */
 	if (str) { /* 如果str不为空 */
 		len = strlen(str); /* 计算该str的字符串长度 */
-		s->inb = domalloc(len+4); /* 分配输入缓冲（之所以+4是因为，要在str后面放置几个哨兵字符） */
-		s->inp = s->inb; /* 矫正输入缓冲的基地址指针和当前指针 */
+		s->inb = domalloc(len+4); /* 分配输入缓冲（之所以+4是因为，要在str后面放置4个哨兵字符） */
+		s->inp = s->inb; /* 设置输入源缓冲区的当前指针为新分配空间的基地址 */
 		strncpy((char *)s->inp, str, len); /* 将str复制到新分配的输入缓冲中去 */
 	} else { /* 如果str为空 */
 		s->inb = domalloc(INS+4); /* 分配输入缓冲区 */
-		s->inp = s->inb; /* 矫正输入缓冲的基地址指针和当前指针 */
-		len = 0;
+		s->inp = s->inb; /* 设置输入源缓冲区的当前指针为新分配空间的基地址 */
+		len = 0; /* 设置len为0 */
 	}
-	s->inl = s->inp+len; /* s->inl指向输入缓冲中最后一个有效字符的下一个字符 */
-	s->inl[0] = s->inl[1] = EOB; /* 设置End Of Buffer的哨兵字符 */
-	return s; /* 返回新创立的源节点 */
+	s->inl = s->inp+len; /* 设置s->inl使其指向输入源缓冲区中最后一个有效字符的下一个字符 */
+	s->inl[0] = s->inl[1] = EOB; /* 设置两个EOB（End Of Buffer）哨兵字符 */
+	return s; /* 返回新分配的输入源节点首地址 */
 }
 
 /**

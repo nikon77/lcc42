@@ -7,9 +7,11 @@
  * A hideset is a null-terminated array of Nlist pointers.
  * They are referred to by indices in the hidesets array.
  * Hideset 0 is empty.
+ * 一个隐藏集是一个以0结尾的数组，数组里的元素是Nlist结构体指针.
+ *
  */
 
-#define	HSSIZ	32
+#define	HSSIZ	32	/* 一个隐藏集中元素的个数 */
 typedef	Nlist	**Hideset;
 Hideset	*hidesets;
 int	nhidesets = 0;
@@ -19,9 +21,7 @@ int	inserths(Hideset, Hideset, Nlist *);
 /*
  * Test for membership in a hideset
  */
-int
-checkhideset(int hs, Nlist *np)
-{
+int checkhideset(int hs, Nlist *np) {
 	Hideset hsp;
 
 	if (hs>=nhidesets)
@@ -36,9 +36,7 @@ checkhideset(int hs, Nlist *np)
 /*
  * Return the (possibly new) hideset obtained by adding np to hs.
  */
-int
-newhideset(int hs, Nlist *np)
-{
+int newhideset(int hs, Nlist *np) {
 	int i, len;
 	Nlist *nhs[HSSIZ+3];
 	Hideset hs1, hs2;
@@ -63,9 +61,7 @@ newhideset(int hs, Nlist *np)
 	return nhidesets++;
 }
 
-int
-inserths(Hideset dhs, Hideset shs, Nlist *np)
-{
+int inserths(Hideset dhs, Hideset shs, Nlist *np) {
 	Hideset odhs = dhs;
 
 	while (*shs && *shs < np)
@@ -81,9 +77,7 @@ inserths(Hideset dhs, Hideset shs, Nlist *np)
 /*
  * Hideset union
  */
-int
-unionhideset(int hs1, int hs2)
-{
+int unionhideset(int hs1, int hs2) {
 	Hideset hp;
 
 	for (hp = hidesets[hs2]; *hp; hp++)
@@ -91,18 +85,17 @@ unionhideset(int hs1, int hs2)
 	return hs1;
 }
 
-void
-iniths(void)
-{
+/**
+ * iniths - 初始化hideset
+ */
+void iniths(void) {
 	hidesets = (Hideset *)domalloc(maxhidesets*sizeof(Hideset *));
 	hidesets[0] = (Hideset)domalloc(sizeof *hidesets[0]);
 	*hidesets[0] = NULL;
 	nhidesets++;
 }
 
-void
-prhideset(int hs)
-{
+void prhideset(int hs) {
 	Hideset np;
 
 	for (np = hidesets[hs]; *np; np++) {

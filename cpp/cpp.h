@@ -22,14 +22,14 @@ typedef unsigned char uchar;
  * 一共60个token类型
  */
 enum toktype {
-	END,
-	UNCLASS,	/* 未归类，unclass，token */
+	END,	/* 当遇到EOFC时，返回END，token */
+	UNCLASS,/* 未归类（值为1），unclass，token */
 	NAME,	/* 标识符名，identified name，token */
 	NUMBER,	/* 数字，number，token */
 	STRING,	/* 字符串，string，token */
-	CCON,
-	NL,
-	WS,
+	CCON,	/* 字符常量，character constant，token */
+	NL,		/* 换行（），newline，token */
+	WS,		/* 空白符（），white space，token */
 	DSHARP,	/* 粘贴字符（ ## ），double sharp，token */
 	EQ,		/* 相等运算符（ == ），equal，token */
 	NEQ,	/* 不相等运算符（ != ），not equal，token */
@@ -55,10 +55,10 @@ enum toktype {
 	NOT,	/* 逻辑非（ ! ），logic not，token */
 	SLASH,	/* 除法运算符（ / ），slash，token */
 	PCT,	/* 求模运算符（ % ），percentage，token */
-	LT,	/* 小于（ < ），less than，token */
-	GT,	/* 大于（ > ），greater than，token */
-	CIRC, /* 异或运算符，也称"闭环加法"或"本位加法"运算符（ ^ ），circ，token */
-	OR,	/* 按位或运算符（ | ），bit or，token */
+	LT,		/* 小于（ < ），less than，token */
+	GT,		/* 大于（ > ），greater than，token */
+	CIRC,	/* 异或运算符，也称"闭环加法"或"本位加法"运算符（ ^ ），circ，token */
+	OR,		/* 按位或运算符（ | ），bit or，token */
 	QUEST,	/* 问号（ ? ），question mark，token */
 	COLON,	/* 冒号（ : ），colon，token */
 	ASGN,	/* 赋值（ = ），assign，token */
@@ -70,7 +70,7 @@ enum toktype {
 	ASPLUS,	/* 加赋值运算符（ += ），assign plus，token */
 	ASMINUS,/* 减赋值运算符（ -= ），assign minus，token */
 	ASSTAR,	/* 乘赋值运算符（ *= ），assign star，token */
-	ASSLASH, /* 除赋值运算符（ /= ），assign slash，token */
+	ASSLASH,/* 除赋值运算符（ /= ），assign slash，token */
 	ASPCT,	/* 求模赋值运算符（ %= ），assign percentage，token */
 	ASCIRC, /* 按位异或赋值运算符（ ^= ），assign circ，token */
 	ASLSH,	/* 左移赋值运算符（ <<= ），assign left shift，token */
@@ -110,7 +110,7 @@ enum kwtype {
 };
 
 #define		ISDEFINED	01	/* has #defined value */
-#define		ISKW		02	/* is PP(preprocessor) keyword */
+#define		ISKW		02	/* 是预处理程序的关键字（is preprocessor keyword） */
 #define		ISUNCHANGE	04	/* can't be #defined in PP */
 #define		ISMAC		010	/* builtin macro, e.g. __LINE__ */
 
@@ -119,34 +119,34 @@ enum kwtype {
 #define		XPWS	1			/* token flag: white space to assure token sep. */
 
 /**
- * 描述一个token
+ * 描述一个Token（分词）
  */
 typedef struct token {
-	unsigned char	type;		/* token的类型,在枚举常量toktype里取值 */
-	unsigned char 	flag;		/* token的flag */
+	unsigned char	type;		/* Token的类型,在枚举常量toktype里取值 */
+	unsigned char 	flag;		/* Token的flag */
 	unsigned short	hideset;	/* TODO: 隐藏集合? */
 	unsigned int	wslen;		/* TODO: white space length? */
-	unsigned int	len;		/* token长度 */
-	uchar	*t;					/* token字串 */
+	unsigned int	len;		/* Token的字符长度 */
+	uchar	*t;					/* Token字串（注意：这个字串不一定是以空字符结尾） */
 } Token;
 
 /**
- * tokenrow - 描述一串token
+ * Tokenrow - 描述一串Token
  */
 typedef struct tokenrow {
-	Token	*tp;		/* 当前正被扫描的token(current one to scan) */
+	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan) */
 	Token	*bp;		/* Token数组的基地址(base of allocated value) */
-	Token	*lp;		/* 指向上上一个Token(last+1 token used) */
+	Token	*lp;		/* Token数组中有效节点区域的最后一个节点的下一节点的首地址(last+1 token used) */
 	int	max;			/* 数组中Token的个数(number allocated) */
 } Tokenrow;
 
 /**
- * 描述一个输入文件（栈节点）
+ * 描述一个输入源文件（栈节点）
  */
 typedef struct source {
 	char	*filename;		/* 源文件的文件名 */
 	int		line;			/* 当前的行号 */
-	int		lineinc;		/* TODO: adjustment for \\n lines */
+	int		lineinc;		/* 为续行符做调整(adjustment for \\n lines) */
 	uchar	*inb;			/* 输入缓冲区的基地址(input base) */
 	uchar	*inp;			/* 指向输入缓冲区中当前正在处理的字符(input position) */
 	uchar	*inl;			/* 指向当前输入缓冲区中最后一个有效字符的下一个字符（其后可能是EOB或EOF标记）(input length) */
@@ -156,41 +156,53 @@ typedef struct source {
 } Source;
 
 /**
- * nlist - token的hash表
+ * Nlist - Token的hash表中的链表节点
  */
 typedef struct nlist {
-	struct nlist *next;		/* 下一节点 */
-	uchar	*name;			/* 名字 */
-	int	len;				/* 长度 */
-	Tokenrow *vp;			/* 宏展开的值(value as macro) */
-	Tokenrow *ap;			/* 参数名的列表,如果有的话(list of argument names, if any) */
+	struct nlist *next;		/* 指向hash链表中的下一节点 */
+	uchar	*name;			/* Token的字符串名字 */
+	int	len;				/* Token的字符串长度 */
+	Tokenrow *vp;			/* Token的宏展开值(value as macro) */
+	Tokenrow *ap;			/* Token的参数名的列表,如果有的话(list of argument names, if any) */
 	char	val;			/* enum toktype类型(value as preprocessor name) */
-	char	flag;			/* is defined, is pp name */
+	char	flag;			/* is defined, is pp name，例如：ISDEFINED，ISKW */
 } Nlist;
 
 /**
- * includelist - 文件包含的list
+ * Includelist - 文件包含的目录节点（数组节点）
+ * 注意：always和deleted包含了4种情况：
+ *  always    deleted
+ *    0          0    不包含file指向的头文件目录
+ *    0          1    不包含file指向的头文件目录
+ *    1          0    包含file指向的头文件目录
+ *    1          1    不包含file指向的头文件目录
  */
 typedef	struct	includelist {
-	char	deleted;	/* 设置为0表明，从头文件包含目录列表中删除 */
-	char	always;		/* TODO:总是干嘛？ */
+	char	deleted;	/* 设置为1表明：使always成员无效（即：不包含file指向的头文件目录） */
+	char	always;		/* 设置为1表明，包含file指向的头文件目录 */
 	char	*file;		/* -I指令中的包含目录 */
 } Includelist;
 
 #define		new(t)			(t *)domalloc(sizeof(t))
 
+/* TODO: 下面这俩宏是干啥用的？ */
 #define		quicklook(a,b)	(namebit[(a)&077] & (1<<((b)&037)))
 #define		quickset(a,b)	namebit[(a)&077] |= (1<<((b)&037))
 
 extern	unsigned long namebit[077+1];
 
-enum errtype { WARNING, ERROR, FATAL }; /* 错误级别 */
+/* 错误级别 */
+enum errtype {
+	WARNING,	/* 警告 */
+	ERROR,		/* 错误 */
+	FATAL		/* 严重 */
+};
 
 void	expandlex(void);
 void	fixlex(void);
 void	setup(int, char **);
-int	gettokens(Tokenrow *, int);
-int	comparetokens(Tokenrow *, Tokenrow *);
+int		gettokens(Tokenrow *, int);
+int		comparetokens(Tokenrow *, Tokenrow *);
 Source	*setsource(char *, FILE *, char *);
 void	unsetsource(void);
 void	puttokens(Tokenrow *);
@@ -199,9 +211,9 @@ void	*domalloc(int);
 void	dofree(void *);
 void	error(enum errtype, char *, ...);
 void	flushout(void);
-int	fillbuf(Source *);
-int	trigraph(Source *);
-int	foldline(Source *);
+int		fillbuf(Source *);
+int		trigraph(Source *);
+int		foldline(Source *);
 Nlist	*lookup(Token *, int);
 void	control(Tokenrow *);
 void	dodefine(Tokenrow *);
@@ -210,7 +222,7 @@ void	doinclude(Tokenrow *);
 void	doif(Tokenrow *, enum kwtype);
 void	expand(Tokenrow *, Nlist *);
 void	builtin(Tokenrow *, int);
-int	gatherargs(Tokenrow *, Tokenrow **, int *);
+int		gatherargs(Tokenrow *, Tokenrow **, int *);
 void	substargs(Nlist *, Tokenrow *, Tokenrow **);
 void	expandrow(Tokenrow *, char *);
 void	maketokenrow(int, Tokenrow *);
@@ -223,18 +235,18 @@ void	insertrow(Tokenrow *, int, Tokenrow *);
 void	peektokens(Tokenrow *, char *);
 void	doconcat(Tokenrow *);
 Tokenrow *stringify(Tokenrow *);
-int	lookuparg(Nlist *, Token *);
+int		lookuparg(Nlist *, Token *);
 long	eval(Tokenrow *, int);
 void	genline(void);
 void	setempty(Tokenrow *);
 void	makespace(Tokenrow *);
 char	*outnum(char *, int);
-int	digit(int);
+int		digit(int);
 uchar	*newstring(uchar *, int, int);
-int	checkhideset(int, Nlist *);
+int		checkhideset(int, Nlist *);
 void	prhideset(int);
-int	newhideset(int, Nlist *);
-int	unionhideset(int, int);
+int		newhideset(int, Nlist *);
+int		unionhideset(int, int);
 void	iniths(void);
 void	setobjname(char *);
 #define	rowlen(tokrow)	((tokrow)->lp - (tokrow)->bp)

@@ -3,8 +3,8 @@
 #include <string.h>
 #include "cpp.h"
 
-static char wbuf[2*OBS];
-static char *wbp = wbuf;
+static char wbuf[2*OBS]; /* 输出Token字串的缓冲区 */
+static char *wbp = wbuf; /* 输出Token字串的缓冲区指针 */
 
 /*
  * 1 for tokens that don't need whitespace when they get inserted
@@ -80,13 +80,13 @@ static const char wstab[] = {
  */
 void maketokenrow(int size, Tokenrow *trp)
 {
-	trp->max = size;
+	trp->max = size; /* 设置token row中Token节点的个数 */
 	if (size>0)
-		trp->bp = (Token *)domalloc(size*sizeof(Token));
+		trp->bp = (Token *)domalloc(size*sizeof(Token)); /* 分配Token节点 */
 	else
 		trp->bp = NULL;
-	trp->tp = trp->bp;
-	trp->lp = trp->bp;
+	trp->tp = trp->bp;	/* 由于Token数组中还没有有效Token（当前只是分配了Token节点），故 tp == bp */
+	trp->lp = trp->bp;	/* 由于Token数组中还没有有效Token（当前只是分配了Token节点），故 lp == bp */
 }
 
 Token * growtokenrow(Tokenrow *trp)
@@ -229,26 +229,26 @@ Tokenrow * copytokenrow(Tokenrow *dtr, Tokenrow *str)
 Tokenrow * normtokenrow(Tokenrow *trp)
 {
 	Token *tp;
-	Tokenrow *ntrp = new(Tokenrow);
+	Tokenrow *ntrp = new(Tokenrow); /* 新建一个Tokenrow节点 */
 	int len;
 
-	len = trp->lp - trp->tp;
-	if (len<=0)
-		len = 1;
-	maketokenrow(len, ntrp);
-	for (tp=trp->tp; tp < trp->lp; tp++) {
-		*ntrp->lp = *tp;
-		if (tp->len) {
-			ntrp->lp->t = newstring(tp->t, tp->len, 1);
-			*ntrp->lp->t++ = ' ';
-			if (tp->wslen)
+	len = trp->lp - trp->tp; /* 获得trp中有效Token的个数 */
+	if (len<=0) /* 如果个数小于0 */
+		len = 1; /* 令个数为1 */
+	maketokenrow(len, ntrp); /* 在新分配的Tokenrow中分配len个Token元素 */
+	for (tp=trp->tp; tp < trp->lp; tp++) { /* 遍历trp中的Token元素 */
+		*ntrp->lp = *tp; /* 将tp指向的当前节点复制给lp指向的位置 */
+		if (tp->len) { /* 如果当前Token节点的字串长度不为0 */
+			ntrp->lp->t = newstring(tp->t, tp->len, 1); /* 将tp中的字符串复制到lp中 */
+			*ntrp->lp->t++ = ' '; /* 将该字符串结尾附加一个空格字符 */
+			if (tp->wslen) /* TODO: 这个wslen到底是干啥的？ */
 				ntrp->lp->wslen = 1;
 		}
-		ntrp->lp++;
+		ntrp->lp++; /* lp移动到下一节点 */
 	}
-	if (ntrp->lp > ntrp->bp)
+	if (ntrp->lp > ntrp->bp) /* TODO: 这个wslen到底是干啥的？ */
 		ntrp->bp->wslen = 0;
-	return ntrp;
+	return ntrp; /* 返回新建的Tokenrow节点的首地址 */
 }
 
 /*
@@ -258,7 +258,7 @@ void peektokens(Tokenrow *trp, char *str)
 {
 	Token *tp;
 
-	tp = trp->tp;
+	tp = trp->tp; /* 得到token row中当前Token结构的首地址 */
 	flushout();
 	if (str)
 		fprintf(stderr, "%s ", str);
@@ -288,24 +288,24 @@ void puttokens(Tokenrow *trp)
 	int len;
 	uchar *p;
 
-	if (verbose)
+	if (verbose) /* 如果开启了打印详细信息的选项 */
 		peektokens(trp, "");
-	tp = trp->bp;
-	for (; tp<trp->lp; tp++) {
-		len = tp->len+tp->wslen;
-		p = tp->t-tp->wslen;
+	tp = trp->bp; /* 拿到token row中第一个Token的首地址 */
+	for (; tp < trp->lp; tp++) { /* 遍历token row中的token */
+		len = tp->len+tp->wslen; /* 拿到当前Token的字符串长度。TODO：wslen是啥东西？ */
+		p = tp->t - tp->wslen; /* 拿到当前Token的字符串首地址 */
 		while (tp<trp->lp-1 && p+len == (tp+1)->t - (tp+1)->wslen) {
 			tp++;
 			len += tp->wslen+tp->len;
 		}
-		if (len>OBS/2) {		/* handle giant token */
+		if (len > OBS/2) {	/* handle giant token */
 			if (wbp > wbuf)
 				fwrite(wbuf, 1, wbp-wbuf, stdout);
 			fwrite((char *)p, 1, len, stdout);
 			wbp = wbuf;
 		} else {	
-			memcpy(wbp, p, len);
-			wbp += len;
+			memcpy(wbp, p, len); /* 将当前Token的字符串拷贝至wbp中 */
+			wbp += len; /* 更新wbp的指针到新位置 */
 		}
 		if (wbp >= &wbuf[OBS]) {
 			fwrite(wbuf, 1, OBS, stdout);
@@ -314,14 +314,14 @@ void puttokens(Tokenrow *trp)
 			wbp -= OBS;
 		}
 	}
-	trp->tp = tp;
+	trp->tp = tp; /* 更新token row中的当前Token为token row中最后一个元素的下一元素的首地址 */
 	if (cursource->fd==stdin)
 		flushout();
 }
 
 void flushout(void)
 {
-	if (wbp>wbuf) {
+	if (wbp > wbuf) {
 		fwrite(wbuf, 1, wbp-wbuf, stdout);
 		fflush(stdout);
 		wbp = wbuf;
@@ -339,13 +339,12 @@ void setempty(Tokenrow *trp)
 }
 
 /*
- * generate a number
+ * 将数值n转化为字符串输出
  */
-char * outnum(char *p, int n)
-{
-	if (n>=10)
+char * outnum(char *p, int n) {
+	if (n >= 10)
 		p = outnum(p, n/10);
-	*p++ = n%10 + '0';
+	*p++ = n % 10 + '0';
 	return p;
 }
 

@@ -1,5 +1,5 @@
-#line 1 "c_plus_plus_comment.c"
-int main(void) { ; }
-
-
-
+#include <stdio.h>
+int main(void) {
+	printf("hello,world!\n");
+	return 0;
+}

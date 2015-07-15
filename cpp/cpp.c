@@ -8,8 +8,8 @@
 
 #define		OUTS	16384		/* 输出缓冲区的大小 */
 char		outbuf[OUTS];		/* 输出缓冲区 */
-char		*outp = outbuf;		/* 输出缓冲区的指针 */
-Source		*cursource;			/* 当前的输入源 */
+char		*outp = outbuf;		/* 输出缓冲区的当前指针 */
+Source		*cursource;			/* 指向的输入源栈的栈顶元素 */
 int			nerrs;				/* 记录预处理中错误数 */
 
 struct	token nltoken = { NL, 0, 0, 0, 1, (uchar*)"\n" }; /* 换行符的token结构 */
@@ -21,35 +21,32 @@ int		skipping;			/* TODO: 略过谁？*/
 
 char rcsid[] = ": version 4.2";	/* 版本字串 */
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 	Tokenrow tr;			/* token row */
 	time_t t;				/* 保存当前时间的整数值 */
-	char ebuf[BUFSIZ];		/* stderr buffer */
+	char ebuf[BUFSIZ];		/* stderr buffer（stderr默认是没有buffer的，我们为其建立一个buffer） */
 
 	setbuf(stderr, ebuf);	/* 设定标准错误的输出缓冲区为ebuf */
 	t = time(NULL);			/* 获得当前时间的整数值 */
 	curtime = ctime(&t);	/* 获得当前时间的字串值(例如: Sat Jul  4 12:27:13 2014)保存到全局变量curtime中 */
-	maketokenrow(3, &tr);	/* 建立一个 token row */
+	maketokenrow(3, &tr);	/* 建立一个 token row（默认分配3个Token结构） */
 	expandlex();			/* 展开状态机 */
-	setup(argc, argv);		/* 建立关键字hash表;处理命令行选项、参数;输出行控制信息 */
-	fixlex();				/* 使lex兼容C++的单行注释 */
-	iniths();				/* 初始化hideset */
-	genline();				/* 产生一个line control信息 */
-	process(&tr);
+	setup(argc, argv);		/* 建立关键字hash表;处理命令行选项参数;将输入源文件压栈 */
+	fixlex();				/* 适时的关闭兼容C++单行注释兼容特性 */
+	iniths();				/* 初始化hideset，TODO: 啥是hideset？ */
+	genline();				/* 产生一个行控制(line control)信息 */
+	process(&tr);			/* TODO */
 	flushout();				/* flush output buffer to stdout */
 	fflush(stderr);			/* flush stderr */
 	exit(nerrs > 0);		/* 退出进程 */
 	return 0;
 }
 
-void
-process(Tokenrow *trp)
-{
+void process(Tokenrow *trp) {
 	int anymacros = 0;
 
 	for (;;) {
-		if (trp->tp >= trp->lp) {
+		if (trp->tp >= trp->lp) { /* 如果当前token row中没有有效数据 */
 			trp->tp = trp->lp = trp->bp;
 			outp = outbuf;
 			anymacros |= gettokens(trp, 1);
@@ -86,9 +83,7 @@ process(Tokenrow *trp)
 	}
 }
 	
-void
-control(Tokenrow *trp)
-{
+void control(Tokenrow *trp) {
 	Nlist *np;
 	Token *tp;
 
@@ -250,8 +245,7 @@ control(Tokenrow *trp)
 	return;
 }
 
-void * domalloc(int size)
-{
+void * domalloc(int size) {
 	void *p = malloc(size);
 
 	if (p==NULL)
@@ -259,14 +253,11 @@ void * domalloc(int size)
 	return p;
 }
 
-void
-dofree(void *p)
-{
+void dofree(void *p) {
 	free(p);
 }
 
-void error(enum errtype type, char *string, ...)
-{
+void error(enum errtype type, char *string, ...) {
 	va_list ap;
 	char *cp, *ep;
 	Token *tp;
