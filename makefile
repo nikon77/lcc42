@@ -54,19 +54,19 @@ T=$(TSTDIR)/
 # - 告诉make系统，如果目标中第一个命令执行失败，他会忽略掉这个错误，继续执行该目标中后续的命令
 # @ 告诉make系统,禁止make打印此命令行.(但打印该命令行产生的输出信息)
 what:
-	-@echo make all rcc lburg lcpp lcc bprint liblcc triple clean clobber
+	-@echo make all rcc lburg cpp lcc bprint liblcc triple clean clobber
 
 # 程序要输出的几个目标
 # rcc: 真正的C Compiler,即(Real C Compiler)
 # lburg: the code-generator generator(代码产生器的产生器)
-# lcpp: c preprocessor program(C预处理器)
+# cpp: c preprocessor program(C预处理器)
 # lcc: compile driver program(编译总驱动程序)
 # bprint: xxx
 # liblcc: lcc library
-all::	config rcc lburg lcpp lcc bprint liblcc
+all::	config rcc lburg cpp lcc bprint liblcc
 
 config::
-	./config_on_ubuntu15-amd64.sh
+	./config_on_ubuntu15.04-amd64.sh
 # rcc程序是真正的C Compiler,即(Real C Compiler)
 # 它的依赖文件: 
 # src/main.c  src/alloc.c  src/bind.c   src/dag.c  dagcheck.c  src/decl.c 
@@ -89,7 +89,7 @@ lburg:	$Blburg$E
 # C预处理程序
 # 它依赖于: cpp.c  cpp.h  eval.c  getopt.c  hideset.c  include.c  lex.c  macro.c  nlist.c  tokens.c  unix.c
 # 这些文件均位于cpp目录下
-lcpp:	$Blcpp$E
+cpp:	$Bcpp$E
 
 # lcc是一个编译总驱动程序(driver).它依赖两个源文件: etc/lcc.c 和 etc/$OS.c(在ubuntu上就是linux.c)
 lcc:	$Blcc$E
@@ -219,7 +219,7 @@ $Bgram$O:	lburg/gram.c;	$(CC) $(CFLAGS) -c -Ilburg -o $@ lburg/gram.c
 CPPOBJS=$Bcpp$O $Blexer$O $Bnlist$O $Btokens$O $Bmacro$O $Beval$O \
 	$Binclude$O $Bhideset$O $Bgetopt$O $Bunix$O
 
-$Blcpp$E:	$(CPPOBJS)
+$Bcpp$E:	$(CPPOBJS)
 		$(LD) $(LDFLAGS) -o $@ $(CPPOBJS) 
 
 $(CPPOBJS):	cpp/cpp.h
@@ -301,10 +301,9 @@ clean::		testclean
 		$(RM) $Bdagcheck.c $Balpha.c $Bmips.c $Bx86.c $Bsparc.c $Bx86linux.c
 		$(RM) $Brcc1$E $Brcc1$E $B1rcc$E $B2rcc$E
 		$(RM) $B*.ilk
-		./config_on_ubuntu15-amd64.sh clean
 
 clobber::	clean
-		$(RM) $Brcc$E $Blburg$E $Blcpp$E $Blcc$E $Bcp$E $Bbprint$E $B*$A
+		$(RM) $Brcc$E $Blburg$E $Bcpp$E $Blcc$E $Bcp$E $Bbprint$E $B*$A
 		$(RM) $B*.pdb $B*.pch
 
 RCCSRCS=src/alloc.c \
@@ -357,7 +356,7 @@ triple:	$B2rcc$E
 		$(RM) $B1rcc$E $Brcc[12]$E; fi
 
 # -B : -Bdir/  use the compiler named `dir/rcc'
-$B1rcc$E:	$Brcc$E $Blcc$E $Blcpp$E
+$B1rcc$E:	$Brcc$E $Blcc$E $Bcpp$E
 		$C -o $@ -B$B $(RCCSRCS)
 $B2rcc$E:	$B1rcc$E
 		$C -o $@ -B$B1 $(RCCSRCS)

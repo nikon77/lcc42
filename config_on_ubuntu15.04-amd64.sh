@@ -2,10 +2,10 @@
 # 此编译脚本使得lcc-4.2在ubuntu-15.04-desktop-amd64系统上编译成功
 export CURRENTDIR=`pwd`
 export BUILDBIN=${CURRENTDIR}/bin
-export DEST_ARCH=x86
-export OS=ubuntu15-amd64
-export BUILDDIR=$BUILDBIN/${DEST_ARCH}-$OS
-export TSTDIR=$BUILDBIN/${DEST_ARCH}-$OS/tst
+export TARGET=x86
+export OS=ubuntu15.04-amd64
+export BUILDDIR=$BUILDBIN/${TARGET}/$OS
+export TSTDIR=$BUILDBIN/${TARGET}/$OS/tst
 export LCCDIR="$BUILDDIR/"
 
 echo BUILDDIR=$BUILDDIR > custom.mk
@@ -27,7 +27,7 @@ build_fatal_error() {
 copy_include_files() {
 	# 拷贝lcc自带的标准头文件到build目录
 	mkdir $BUILDDIR/include && \
-	cp -p -R include/${DEST_ARCH}/linux/* $BUILDDIR/include/ || \
+	cp -p -R include/${TARGET}/linux/* $BUILDDIR/include/ || \
 	build_fatal_error "copy include files failed!"
 }
 

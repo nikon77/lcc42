@@ -27,11 +27,10 @@ char inputs[256] = "";
  * $2将被替换成输入文件;
  * $3将被替换成输出文件.
  */
-char *cpp[] = { LCCDIR "/lcpp",
+char *cpp[] = { LCCDIR "cpp",
 	"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
 	"-Dunix", "-Di386", "-Dlinux",
 	"-D__unix__", "-D__i386__", "-D__linux__", "-D__signed__=signed",
-	//"-imultilib 32","-m32","-mtune=generic","-march=i686",
 	"$1", "$2", "$3", 0 };
 
 /*
@@ -90,20 +89,17 @@ char *ld[] = {
 
 extern char *concat(char *, char *);
 #include <stdio.h>
+#include <assert.h>
 int option(char *arg) {
 	/* 如果命令行上指明了lcc的安装目录，则用此目录覆盖掉默认的lcc安装位置目录 */
   	if (strncmp(arg, "-lccdir=", 8) == 0) {
-		cpp[0] = concat(&arg[8], "/gcc/cpp"); /* TODO: 如果make triple出错,把该行注释掉,改成下一行 */
-		//cpp[0] = concat("/usr/bin/", "cpp");
+		//cpp[0] = concat(&arg[8], "/cpp"); /* 用lcc自带的c预处理器 */
+  		cpp[0] = concat("/usr/bin", "/cpp"); /* 用gcc的c预处理器 */
 		include[0] = concat("-I", concat(&arg[8], "/include"));
-		include[1] = concat("-I", concat(&arg[8], "/gcc/include"));
-		ld[9]  = concat(&arg[8], "/gcc/crtbegin.o");
 		ld[12] = concat("-L", &arg[8]);
-		ld[14] = concat("-L", concat(&arg[8], "/gcc"));
-		ld[19] = concat(&arg[8], "/gcc/crtend.o");
 		com[0] = concat(&arg[8], "/rcc");
 	} else if (strcmp(arg, "-p") == 0 || strcmp(arg, "-pg") == 0) {
-		return 0; /* TODO: 程序性能剖析?但在我的ub12机器上找不到libgmon库... so...目前暂时假定不支持此选项 */
+		return 0; /* TODO: 程序性能剖析?但在我的ub15机器上找不到libgmon库... so...目前暂时假定不支持此选项 */
 		ld[7] = "/usr/lib/i386-linux-gnu/gcrt1.o";
 		ld[18] = "-lgmon";
 	} else if (strcmp(arg, "-b") == 0) /*	Produce code that counts the number of times each expression is executed.

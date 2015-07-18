@@ -3,7 +3,9 @@ lcc是Christopher W.Fraser & David R.Hanson在《A Retargetable C Compiler: Desi
 该工程的目标是对这个源码树进行注释和分析,最终将lcc移植到Ubuntu15-amd64系统下.
 
 编译步骤：
-1. ./config_on_ubuntu15-amd64.sh
+1. ./config_on_ubuntu15-amd64.sh clean
 2. make all
+3. make test
+4. make triple
 
-可执行文件生成在bin目录中.
+生成的可执行文件生成在bin目录中.
