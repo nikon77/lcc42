@@ -27,11 +27,20 @@ char inputs[256] = "";
  * $2将被替换成输入文件;
  * $3将被替换成输出文件.
  */
+//#define USE_GCC_CPP
+#ifdef USE_GCC_CPP
 char *cpp[] = { "/usr/bin/cpp",
-	"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
-	"-Dunix", "-Di386", "-Dlinux",
-	"-D__unix__", "-D__i386__", "-D__linux__", "-D__signed__=signed",
-	"$1", "$2", "$3", 0 };
+		"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
+		"-Dunix", "-Di386", "-Dlinux",
+		"-D__unix__", "-D__i386__", "-D__linux__", "-D__signed__=signed",
+		"$1", "$2", "$3", 0 };
+#else
+char *cpp[] = { LCCDIR "cpp",
+		"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
+		"-Dunix", "-Di386", "-Dlinux",
+		"-D__unix__", "-D__i386__", "-D__linux__", "-D__signed__=signed",
+		"$1","$2","$3",0 };
+#endif
 
 /*
  * The include array is a list of -I options that specify which directives should be searched
@@ -40,7 +49,6 @@ char *cpp[] = { "/usr/bin/cpp",
  * as described in UNIX or Windows installation instructions. The driver adds these options
  * to cpp's arguments when it invokes the preprocessor, except when -N is specified.
  */
-
 char *include[] = {"-I" LCCDIR "include",
 		"-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include" ,
 		"-I/usr/local/include","-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include-fixed",
@@ -91,8 +99,11 @@ extern char *concat(char *, char *);
 int option(char *arg) {
 	/* 如果命令行上指明了lcc的安装目录，则用此目录覆盖掉默认的lcc安装位置目录 */
   	if (strncmp(arg, "-lccdir=", 8) == 0) {
-		//cpp[0] = concat(&arg[8], "/cpp"); /* 用lcc自带的c预处理器 */
+#ifdef USE_GCC_CPP
   		cpp[0] = concat("/usr/bin", "/cpp"); /* 用gcc的c预处理器 */
+#else
+		cpp[0] = concat(&arg[8], "/cpp"); /* 用lcc自带的c预处理器 */
+#endif /* USE_GCC_CPP */
 		include[0] = concat("-I", concat(&arg[8], "/include"));
 		ld[12] = concat("-L", &arg[8]);
 		com[0] = concat(&arg[8], "/rcc");
