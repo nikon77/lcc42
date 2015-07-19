@@ -4,8 +4,14 @@ lcc是Christopher W.Fraser & David R.Hanson在《A Retargetable C Compiler: Desi
 
 编译步骤：
 1. ./config_on_ubuntu15-amd64.sh clean
+
 2. make all
+
 3. make test
+
 4. make triple
 
 生成的可执行文件生成在bin目录中.
+
+当前已知的问题：
+make test阶段，test suite中的paranoia.c和yacc.c未通过编译正确性测试。
