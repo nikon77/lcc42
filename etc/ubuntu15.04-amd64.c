@@ -27,7 +27,7 @@ char inputs[256] = "";
  * $2将被替换成输入文件;
  * $3将被替换成输出文件.
  */
-char *cpp[] = { LCCDIR "cpp",
+char *cpp[] = { "/usr/bin/cpp",
 	"-U__GNUC__", "-D_POSIX_SOURCE", "-D__STRICT_ANSI__",
 	"-Dunix", "-Di386", "-Dlinux",
 	"-D__unix__", "-D__i386__", "-D__linux__", "-D__signed__=signed",
@@ -42,9 +42,9 @@ char *cpp[] = { LCCDIR "cpp",
  */
 
 char *include[] = {"-I" LCCDIR "include",
-"-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include" ,
-"-I/usr/local/include","-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include-fixed",
- "-I/usr/include", 0 };
+		"-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include" ,
+		"-I/usr/local/include","-I/usr/lib/gcc/x86_64-linux-gnu/4.9/include-fixed",
+		"-I/usr/include", 0 };
 
 /* 调用编译器rcc的命令行
  * $1 选项flag(例如: -v)
@@ -73,23 +73,21 @@ char *ld[] = {
                  "$1", "$2",
 	/* 12 */ "-L" LCCDIR,
 	/* 13 */ "-llcc",
-"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/32",
-"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../i386-linux-gnu",
-"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../../lib32 -L/lib/../lib32",
-"-L/usr/lib/i386-linux-gnu",
-"-L/usr/lib/../lib32",
-"-L/usr/lib/gcc/x86_64-linux-gnu/4.9",
-"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../i386-linux-gnu",
-"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../.. -L/usr/lib/i386-linux-gnu", 
+	"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/32",
+	"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../i386-linux-gnu",
+	"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../../lib32 -L/lib/../lib32",
+	"-L/usr/lib/i386-linux-gnu",
+	"-L/usr/lib/../lib32",
+	"-L/usr/lib/gcc/x86_64-linux-gnu/4.9",
+	"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../i386-linux-gnu",
+	"-L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../.. -L/usr/lib/i386-linux-gnu",
 		"-lgcc","-lc", "-lm",
-	/* 18 */ "",
-	/* 19 */ "/usr/lib/gcc/x86_64-linux-gnu/4.9/32/crtend.o", 
-"/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../../lib32/crtn.o",
+	/* 25 */ "",
+	/* 26 */ "/usr/lib/gcc/x86_64-linux-gnu/4.9/32/crtend.o",
+	"/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../../lib32/crtn.o",
 	0 };
 
 extern char *concat(char *, char *);
-#include <stdio.h>
-#include <assert.h>
 int option(char *arg) {
 	/* 如果命令行上指明了lcc的安装目录，则用此目录覆盖掉默认的lcc安装位置目录 */
   	if (strncmp(arg, "-lccdir=", 8) == 0) {
@@ -101,7 +99,7 @@ int option(char *arg) {
 	} else if (strcmp(arg, "-p") == 0 || strcmp(arg, "-pg") == 0) {
 		return 0; /* TODO: 程序性能剖析?但在我的ub15机器上找不到libgmon库... so...目前暂时假定不支持此选项 */
 		ld[7] = "/usr/lib/i386-linux-gnu/gcrt1.o";
-		ld[18] = "-lgmon";
+		ld[25] = "-lgmon";
 	} else if (strcmp(arg, "-b") == 0) /*	Produce code that counts the number of times each expression is executed.
 											If loading takes place, arrange for a prof.out file to be written when the object
 											program terminates. A listing annotated with execution counts can then be generated

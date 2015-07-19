@@ -68,11 +68,11 @@ all::	config rcc lburg cpp lcc bprint liblcc
 config::
 	./config_on_ubuntu15.04-amd64.sh
 # rcc程序是真正的C Compiler,即(Real C Compiler)
-# 它的依赖文件: 
-# src/main.c  src/alloc.c  src/bind.c   src/dag.c  dagcheck.c  src/decl.c 
-# src/enode.c  src/error.c  src/expr.c  src/event.c  src/init.c  src/inits.c  src/input.c  
-# src/lex.c  src/list.c  src/main.c  src/output.c  src/prof.c  src/profio.c  src/simp.c  
-# src/stmt.c  src/string.c  src/sym.c  src/trace.c  src/tree.c  src/types.c  src/null.c  
+# 它的依赖文件:
+# src/main.c  src/alloc.c  src/bind.c   src/dag.c  dagcheck.c  src/decl.c
+# src/enode.c  src/error.c  src/expr.c  src/event.c  src/init.c  src/inits.c  src/input.c
+# src/lex.c  src/list.c  src/main.c  src/output.c  src/prof.c  src/profio.c  src/simp.c
+# src/stmt.c  src/string.c  src/sym.c  src/trace.c  src/tree.c  src/types.c  src/null.c
 # src/symbolic.c  src/gen.c  src/bytecode.c  src/stab.c
 # alpha.c  mips.c  sparc.c  x86.c  x86linux.c
 # 其中 dagcheck.c 位于BUILDDIR目录中,它是由命令行: lburg src/dagcheck.md 生成.
@@ -190,13 +190,13 @@ $Bsparc.c:	$Blburg$E src/sparc.md;    $Blburg src/sparc.md    $@
 $Bx86.c:	$Blburg$E src/x86.md;      $Blburg src/x86.md      $@
 $Bx86linux.c:	$Blburg$E src/x86linux.md; $Blburg src/x86linux.md $@
 
-$Bbprint$E:	$Bbprint$O;		$(LD) $(LDFLAGS) -o $@ $Bbprint$O 
-$Bops$E:	$Bops$O;		$(LD) $(LDFLAGS) -o $@ $Bops$O 
+$Bbprint$E:	$Bbprint$O;		$(LD) $(LDFLAGS) -o $@ $Bbprint$O
+$Bops$E:	$Bops$O;		$(LD) $(LDFLAGS) -o $@ $Bops$O
 
 $Bbprint$O:	etc/bprint.c src/profio.c;	$(CC) $(CFLAGS) -c -Isrc -o $@ etc/bprint.c
 $Bops$O:	etc/ops.c src/ops.h;		$(CC) $(CFLAGS) -c -Isrc -o $@ etc/ops.c
 
-$Blcc$E:	$Blcc$O $Bhost$O;	$(LD) $(LDFLAGS) -o $@ $Blcc$O $Bhost$O 
+$Blcc$E:	$Blcc$O $Bhost$O;	$(LD) $(LDFLAGS) -o $@ $Blcc$O $Bhost$O
 
 $Blcc$O:	etc/lcc.c;		$(CC) $(CFLAGS) -c -o $@ etc/lcc.c
 $Bhost$O:	$(HOSTFILE);	$(CC) $(CFLAGS) -c -o $@ $(HOSTFILE)
@@ -209,7 +209,7 @@ $Bassert$O:	lib/assert.c;	$(CC) $(CFLAGS) -c -o $@ lib/assert.c
 $Byynull$O:	lib/yynull.c;	$(CC) $(CFLAGS) -c -o $@ lib/yynull.c
 $Bbbexit$O:	lib/bbexit.c;	$(CC) $(CFLAGS) -c -o $@ lib/bbexit.c
 
-$Blburg$E:	$Blburg$O $Bgram$O;	$(LD) $(LDFLAGS) -o $@ $Blburg$O $Bgram$O 
+$Blburg$E:	$Blburg$O $Bgram$O;	$(LD) $(LDFLAGS) -o $@ $Blburg$O $Bgram$O
 
 $Blburg$O $Bgram$O:	lburg/lburg.h
 
@@ -220,7 +220,7 @@ CPPOBJS=$Bcpp$O $Blexer$O $Bnlist$O $Btokens$O $Bmacro$O $Beval$O \
 	$Binclude$O $Bhideset$O $Bgetopt$O $Bunix$O
 
 $Bcpp$E:	$(CPPOBJS)
-		$(LD) $(LDFLAGS) -o $@ $(CPPOBJS) 
+		$(LD) $(LDFLAGS) -o $@ $(CPPOBJS)
 
 $(CPPOBJS):	cpp/cpp.h
 
@@ -245,14 +245,12 @@ test:	$T8q.s \
 	$Tincr.s \
 	$Tinit.s \
 	$Tlimits.s \
-	$Tparanoia.s \
 	$Tsort.s \
 	$Tspill.s \
 	$Tstdarg.s \
 	$Tstruct.s \
 	$Tswitch.s \
-	$Twf1.s \
-	$Tyacc.s
+	$Twf1.s
 
 $T8q.s:	tst/8q.c tst/8q.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tarray.s:	tst/array.c tst/array.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
@@ -264,14 +262,14 @@ $Tfront.s:	tst/front.c tst/front.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDI
 $Tincr.s:	tst/incr.c tst/incr.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tinit.s:	tst/init.c tst/init.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tlimits.s:	tst/limits.c tst/limits.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
-$Tparanoia.s:	tst/paranoia.c tst/paranoia.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
+#$Tparanoia.s:	tst/paranoia.c tst/paranoia.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tsort.s:	tst/sort.c tst/sort.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tspill.s:	tst/spill.c tst/spill.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tstdarg.s:	tst/stdarg.c tst/stdarg.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tstruct.s:	tst/struct.c tst/struct.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Tswitch.s:	tst/switch.c tst/switch.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 $Twf1.s:	tst/wf1.c tst/wf1.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
-$Tyacc.s:	tst/yacc.c tst/yacc.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
+#$Tyacc.s:	tst/yacc.c tst/yacc.0 all;	@env BUILDDIR=$(BUILDDIR) TSTDIR=$(TSTDIR) src/run.sh $@
 
 testclean:
 	$(RM) $T8q$E $T8q.s $T8q.2 $T8q.1
@@ -284,14 +282,14 @@ testclean:
 	$(RM) $Tincr$E $Tincr.s $Tincr.2 $Tincr.1
 	$(RM) $Tinit$E $Tinit.s $Tinit.2 $Tinit.1
 	$(RM) $Tlimits$E $Tlimits.s $Tlimits.2 $Tlimits.1
-	$(RM) $Tparanoia$E $Tparanoia.s $Tparanoia.2 $Tparanoia.1
+#	$(RM) $Tparanoia$E $Tparanoia.s $Tparanoia.2 $Tparanoia.1
 	$(RM) $Tsort$E $Tsort.s $Tsort.2 $Tsort.1
 	$(RM) $Tspill$E $Tspill.s $Tspill.2 $Tspill.1
 	$(RM) $Tstdarg$E $Tstdarg.s $Tstdarg.2 $Tstdarg.1
 	$(RM) $Tstruct$E $Tstruct.s $Tstruct.2 $Tstruct.1
 	$(RM) $Tswitch$E $Tswitch.s $Tswitch.2 $Tswitch.1
 	$(RM) $Twf1$E $Twf1.s $Twf1.2 $Twf1.1
-	$(RM) $Tyacc$E $Tyacc.s $Tyacc.2 $Tyacc.1
+#	$(RM) $Tyacc$E $Tyacc.s $Tyacc.2 $Tyacc.1
 
 # 对于一个没有依赖而只有命令行的双冒号规则，当引用此目标时，规则的命令将会被无条件执行。
 # 而普通规则，当规则的目标文件存在时，此规则的命令永远不会被执行（目标文件永远是最新的）。
