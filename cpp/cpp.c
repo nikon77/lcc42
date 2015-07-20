@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 	genline();				/* 产生一个行控制(line control)信息 */
 	process(&tr);			/* TODO */
 	flushout();				/* flush output buffer to stdout */
-	fflush(stderr);			/* flush stderr */
+	fflush(stderr);			/* flush stderr buffer */
 	exit(nerrs > 0);		/* 退出进程 */
 	return 0;
 }

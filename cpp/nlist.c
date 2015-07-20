@@ -3,11 +3,11 @@
 #include <string.h>
 #include "cpp.h"
 
-extern	int getopt(int, char *const *, const char *);
+extern	int		getopt(int, char *const *, const char *);
 extern	char	*optarg;
-extern	int	optind;
-extern	int	verbose;
-extern	int	Cplusplus;
+extern	int		optind;
+extern	int		verbose;
+extern	int		Cplusplus;
 Nlist	*kwdefined;	/* 指向defined关键字的Nlist结构 */
 
 #define		NLSIZE		128				/* hash桶的大小 */

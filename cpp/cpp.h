@@ -132,6 +132,7 @@ typedef struct token {
 
 /**
  * Tokenrow - 描述一串Token
+ * 注意：Tokenrow中的数据是可扩展的.
  */
 typedef struct tokenrow {
 	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan) */
@@ -209,6 +210,7 @@ void	puttokens(Tokenrow *);
 void	process(Tokenrow *);
 void	*domalloc(int);
 void	dofree(void *);
+int		getopt(int , char * const *, const char *);
 void	error(enum errtype, char *, ...);
 void	flushout(void);
 int		fillbuf(Source *);

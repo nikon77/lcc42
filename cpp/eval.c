@@ -99,9 +99,7 @@ enum toktype ops[NSTAK], *op;
 /*
  * Evaluate an #if #elif #ifdef #ifndef line.  trp->tp points to the keyword.
  */
-long
-eval(Tokenrow *trp, int kw)
-{
+long eval(Tokenrow *trp, int kw) {
 	Token *tp;
 	Nlist *np;
 	int ntok, rand;
@@ -217,9 +215,7 @@ syntax:
 	return 0;
 }
 
-int
-evalop(struct pri pri)
-{
+int evalop(struct pri pri) {
 	struct value v1, v2;
 	long rv1, rv2;
 	int rtype, oper;
@@ -513,8 +509,11 @@ struct value tokval(Token *tp)
 	return v;
 }
 
-int digit(int i)
-{
+/**
+ * digit - 将一个数字字符常量转化为数字
+ * 例如: '3' -> 3 , 'f' -> 15 , 'B' -> 12 , [^1-9a-fA-F] -> -1
+ */
+int digit(int i) {
 	if ('0'<=i && i<='9')
 		i -= '0';
 	else if ('a'<=i && i<='f')

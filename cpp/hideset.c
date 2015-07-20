@@ -12,10 +12,10 @@
  */
 
 #define	HSSIZ	32	/* 一个隐藏集中元素的个数 */
-typedef	Nlist	**Hideset;
-Hideset	*hidesets;
-int	nhidesets = 0;
-int	maxhidesets = 3;
+typedef	Nlist	**Hideset; /* 一个指向结构体指针的指针类型 */
+Hideset	*hidesets; /* 一个指向Hideset类型的指针，也可以将它当作是元素类型是Hideset的数组首地址（数组名） */
+int	nhidesets = 0; /* 当前隐藏集的个数 */
+int	maxhidesets = 3; /* 隐藏集的最大个数 */
 int	inserths(Hideset, Hideset, Nlist *);
 
 /*
@@ -89,7 +89,7 @@ int unionhideset(int hs1, int hs2) {
  * iniths - 初始化hideset
  */
 void iniths(void) {
-	hidesets = (Hideset *)domalloc(maxhidesets*sizeof(Hideset *));
+	hidesets = (Hideset *)domalloc(maxhidesets*sizeof(Hideset *)); /* TODO: 作者这里写错了（sizeof中应该是Hideset而不是Hideset *） */
 	hidesets[0] = (Hideset)domalloc(sizeof *hidesets[0]);
 	*hidesets[0] = NULL;
 	nhidesets++;
