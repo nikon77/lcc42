@@ -246,6 +246,10 @@ int _getopt_internal(int argc, char * const *argv, const char *optstring,
 	}
 }
 
+/**
+ * 注意：该版本的getopt和UNIX系统的getopt是有细微差别的：
+ * 此版本的getopt函数没有实现opstring中的“首字符是+号”的功能。
+ */
 int getopt(int argc, char * const *argv, const char *optstring) {
 	return _getopt_internal(argc, argv, optstring, (const struct option *) 0,
 			(int *) 0, 0);

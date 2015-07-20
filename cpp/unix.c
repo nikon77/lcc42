@@ -25,7 +25,7 @@ void setup(int argc, char **argv) {
 	extern void setup_kwtab(void);
 
 	setup_kwtab(); /* 建立关键字hash表 */
-	while ((c = getopt(argc, argv, "MNOVv+I:D:U:F:lg")) != -1)
+	while ((c = getopt(argc, argv, "MNOVv+I:D:U:F:lg")) != -1) /* 如果选项字符后面跟一个冒号说明该选项有附加的参数 */
 		switch (c) {
 		case 'N': /* 不包含系统头文件目录（TODO：要保证命令行上，包含系统头文件目录的-I选项在-N选项之前出现，否则程序行为不正确） */
 			for (i=0; i< NINCLUDE; i++)
@@ -60,7 +60,7 @@ void setup(int argc, char **argv) {
 		case 'V': /* 输出详细信息 */
 			verbose++;
 			break;
-		case '+': /* 兼容C++选项 */
+		case '+': /* 兼容C++选项（NOTE:lcc默认是兼容C++选项的） */
 			Cplusplus++;
 			break;
 		default: /* c == '?' (unknown option...) */
