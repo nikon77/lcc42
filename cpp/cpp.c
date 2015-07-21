@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 	fixlex();				/* 适时的关闭兼容C++单行注释兼容特性 */
 	iniths();				/* 初始化hideset，TODO: 啥是hideset？ */
 	genline();				/* 产生一个行控制(line control)信息 */
-	process(&tr);			/* TODO */
+	process(&tr);			/*  */
 	flushout();				/* flush output buffer to stdout */
 	fflush(stderr);			/* flush stderr buffer */
 	exit(nerrs > 0);		/* 退出进程 */

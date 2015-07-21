@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define		INS			32768		/* 输入缓冲大小（Input Buffer Size） */
+#define		INS			32768		/* 输入源的输入缓冲区大小（Input Buffer Size） */
 #define		OBS			4096		/* 输出缓冲大小（Output Buffer Size） */
 #define		NARG		32			/* 一个宏的最大参数个数 */
 #define		NINCLUDE	32			/* 包含目录的最大个数(即命令行上-I选项的最大个数) */
@@ -125,17 +125,17 @@ typedef struct token {
 	unsigned char	type;		/* Token的类型,在枚举常量toktype里取值 */
 	unsigned char 	flag;		/* Token的flag */
 	unsigned short	hideset;	/* TODO: 隐藏集合? */
-	unsigned int	wslen;		/* TODO: white space length? */
+	unsigned int	wslen;		/* 该Token的字串中最前面的空白符字符的长度 */
 	unsigned int	len;		/* Token的字符长度 */
 	uchar	*t;					/* Token字串（注意：这个字串不一定是以空字符结尾） */
 } Token;
 
 /**
- * Tokenrow - 描述一串Token
+ * Tokenrow - 描述C源程序中的一行Token
  * 注意：Tokenrow中的数据是可扩展的.
  */
 typedef struct tokenrow {
-	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan) */
+	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan)TODO: 这个变量压根没啥用 */
 	Token	*bp;		/* Token数组的基地址(base of allocated value) */
 	Token	*lp;		/* Token数组中有效节点区域的最后一个节点的下一节点的首地址(last+1 token used) */
 	int	max;			/* 数组中Token的个数(number allocated) */
@@ -148,7 +148,7 @@ typedef struct source {
 	char	*filename;		/* 源文件的文件名 */
 	int		line;			/* 当前的行号 */
 	int		lineinc;		/* 为续行符做调整(adjustment for \\n lines) */
-	uchar	*inb;			/* 输入缓冲区的基地址(input base) */
+	uchar	*inb;			/* 输入缓冲区的基地址(input base)，如果source指代的是文件，那么缓冲区大小为 INS */
 	uchar	*inp;			/* 指向输入缓冲区中当前正在处理的字符(input position) */
 	uchar	*inl;			/* 指向当前输入缓冲区中最后一个有效字符的下一个字符（其后可能是EOB或EOF标记）(input length) */
 	FILE*	fd;				/* 输入源文件的FILE指针(input source) */

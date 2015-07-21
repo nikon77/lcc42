@@ -79,8 +79,7 @@ static const char wstab[] = {
  * @trp: Tokenrow结构
  * 注意：Tokenrow是可以动态扩展的
  */
-void maketokenrow(int size, Tokenrow *trp)
-{
+void maketokenrow(int size, Tokenrow *trp) {
 	trp->max = size; /* 设置token row中Token节点的个数 */
 	if (size>0)
 		trp->bp = (Token *)domalloc(size*sizeof(Token)); /* 分配Token节点 */
@@ -90,18 +89,24 @@ void maketokenrow(int size, Tokenrow *trp)
 	trp->lp = trp->bp;	/* 由于Token数组中还没有有效Token（当前只是分配了Token节点），故 lp == bp */
 }
 
-Token * growtokenrow(Tokenrow *trp)
-{
+/**
+ * growtokenrow - 增大Tokenrow数组
+ * @trp：要被增大的Tokenrow
+ * 返回值：要写入Tokenrow的Token数组的新Token指针
+ */
+#include <assert.h>
+Token * growtokenrow(Tokenrow *trp) {
 	int ncur = trp->tp - trp->bp;
 	int nlast = trp->lp - trp->bp;
 
-	trp->max = 3*trp->max/2 + 1;
-	trp->bp = (Token *)realloc(trp->bp, trp->max*sizeof(Token));
-	if (trp->bp == NULL)
-		error(FATAL, "Out of memory from realloc");
+	assert(ncur == 0); /* 这一行是我加的，换句话说： trp->tp变量压根没啥用... */
+	trp->max = 3*trp->max/2 + 1; /* 增大1.5倍 */
+	trp->bp = (Token *)realloc(trp->bp, trp->max*sizeof(Token)); /* 扩大Tokenrow中的Token数组 */
+	if (trp->bp == NULL) /* 如果扩大数组失败 */
+		error(FATAL, "Out of memory from realloc"); /* 打印错误消息并退出进程 */
 	trp->lp = &trp->bp[nlast];
 	trp->tp = &trp->bp[ncur];
-	return trp->lp;
+	return trp->lp; /* 返回扩大后的当前Token指针 */
 }
 
 /*
@@ -130,9 +135,7 @@ int comparetokens(Tokenrow *tr1, Tokenrow *tr2)
  * tp ends up pointing just beyond the replacement.
  * Canonical whitespace is assured on each side.
  */
-void
-insertrow(Tokenrow *dtr, int ntok, Tokenrow *str)
-{
+void insertrow(Tokenrow *dtr, int ntok, Tokenrow *str) {
 	int nrtok = rowlen(str);
 
 	dtr->tp += ntok;

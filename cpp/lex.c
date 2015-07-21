@@ -341,8 +341,8 @@ void expandlex(void) {
 	for (fp = fsm; fp->state>=0; fp++) { /* 对任意非负的状态 */
 		for (i=0; fp->ch[i]; i++) { /* 如果其下一字符不为0 */
 			nstate = fp->nextstate; /* 获取到它的下一状态(迁移状态) */
-			if (nstate >= S_SELF) /* 如果下一状态的值大于S_SELF（说明是接受状态或非法状态） */
-				nstate = ~nstate; /* 对下一状态按位取反。为啥要取反？答曰：可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。（取反后，第7位由0变成了1） */
+			if (nstate >= S_SELF) /* 如果下一状态的值大于S_SELF,说明是接受状态（ACT包装的状态）或非法状态（大于等于32,且小于44） */
+				nstate = ~nstate; /* 对下一状态按位取反。为啥要取反？可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。（取反后，第7位由0变成了1） */
 			switch (fp->ch[i]) {
 
 			case C_XX:		/* 如果下一字符是随机（任一）字符 */
@@ -364,6 +364,31 @@ void expandlex(void) {
 			}
 		}
 	}
+//	{
+//#include <assert.h>
+//		int indexi,indexj,msb,bit7;
+//		for(indexi=0;indexi<256;indexi++) {
+//			for(indexj=0;indexj<MAXSTATE;indexj++) {
+//
+//				msb = (bigfsm[indexi][indexj] & 0x8000)>>15;
+//				bit7 = (bigfsm[indexi][indexj] & 0100)>>6;
+//				if(msb==0&&bit7==1) assert(0);
+//				if(msb==1&&bit7==0) assert(0);
+//				if(msb==0&&bit7==0) assert(0);
+//				if(msb==1&&bit7==1) assert(0);
+//
+//			}
+//		}
+//	}
+	/**
+	 * 至此：bigfsm数组中每个元素的最高位（MSB：most significant bit）和第7位（从最低位开始数）构成以下了4种情况：
+	 * MSB     ：       BIT7
+	 *  0      ：        0		正常的状态变迁
+	 *  0      ：        1		这种情况不存在
+	 *  1      ：        0		这种情况不存在
+	 *  1      ：        1		非法状态（大于等于32,且小于44） 或 接受状态（ACT包装的接受状态）
+	 */
+
 	/**
 	 *  install special cases for:
 	 *  ? (trigraphs，三字符序列),
@@ -374,8 +399,13 @@ void expandlex(void) {
 	for (i=0; i < MAXSTATE; i++) { /* 对于每一状态i */
 		for (j=0; j<0xFF; j++) /* 查看该状态i的下一字符j */
 			if (j=='?' || j=='\\') { /* 如果该字符是'?'或'\\' */
-				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的迁移状态大于0（说明不是接受状态也不是非法状态，此时第7位是0，低6位小于32） */
+				if (bigfsm[j][i]>0) { /* 如果该状态i对应于字符j的迁移状态大于0（说明不是接受状态也不是非法状态，此时第7位是0，低6位小于32） */
 					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“迁移状态”各位按位取反,取反后该值最高位为1（即小于0）（将该“迁移状态”变成了需要做特殊处理的非法状态），而且第7位从0变成了1） */
+#include <assert.h>
+					printf("lower 6 bits = %d\n",0x003F & bigfsm[j][i]);
+					printf("higher 9 bits = %d\n",GETACT(bigfsm[j][i]));
+//					assert((0x003F & bigfsm[j][i])<=32);
+				}
 				bigfsm[j][i] &= ~QBSBIT; /* 再将该“迁移状态”的第7位清0 */
 			}
 		bigfsm[EOB][i] = ~S_EOB; /* 将状态i对应于字符EOB的迁移状态设置为S_EOB的取反（取反后，最高位为1,第7位为1） */
@@ -383,12 +413,12 @@ void expandlex(void) {
 			bigfsm[EOFC][i] = ~S_EOF; /* 将S_EOF取反（取反后，第7位为1,最高位为1） */
 	}
 	/**
-	 * 综上：bigfsm数组中每个元素的第7位（从最低位开始数）和最高位（most significant bit）构成以下了4种情况：
-	 *   bit7    ：       MSB（most significant bit）
-	 *    0      ：        0		正常的状态变迁
-	 *    0      ：        1		“非法状态”，借机处理三字符序列，续行符，古日尔曼字母
-	 *    1      ：        0    接受状态（一般的 接受状态 和 lookahead C_XX的接受状态）
-	 *    1      ：        1		处理EOF 和 EOB
+	 * 综上：bigfsm数组中每个元素的最高位（MSB：most significant bit）和第7位（从最低位开始数）构成以下了4种情况：
+	 *   MSB     ：       BIT7
+	 *    0      ：        0    正常的状态变迁
+	 *    0      ：        1    XXX: “非法状态”，借机处理三字符序列，续行符，古日尔曼字母
+	 *    1      ：        0    XXX: 接受状态（一般的 接受状态 和 lookahead C_XX的接受状态）
+	 *    1      ：        1    非法状态（大于等于32,且小于44） 或 接受状态（ACT包装的接受状态）
 	 */
 #ifdef DEBUG_FSM
 	print_bigfsm();
@@ -406,53 +436,61 @@ void fixlex(void) {
 }
 
 /**
- * gettokens - 从输入源的缓冲区中得到一个 token row
+ * gettokens - 从输入源的缓冲区中得到一行字符，将其存储成Tokenrow格式保存在内存中
  * @trp: 保存返回的 token row
  * @reset: reset如果为非0，则表示输入缓冲可以被rewind
  * 返回值： TODO
- * NOTE: fill in a row of tokens from input, terminated by NL or END
+ * NOTE: fill in a row of tokens from input, terminated by NL or END(遇到EOFC的状态)
  * First token is put at trp->lp.
  * Reset is non-zero when the input buffer can be "rewound."
  * The value is a flag indicating that possible macros have
  * been seen in the row.
+ *
+ * TODO: 注意：这个函数有bug，比如说，如果待编译的C源程序中有一行如果大于32KB的话，
+ * gettokens()会在调用fillbuf函数时令程序当掉! 但一般来说没有这么变态的源程序...
  */
 int gettokens(Tokenrow *trp, int reset) {
 	register int c, state, oldstate;
 	register uchar *ip;		/* 输入源缓冲区中当前正在处理的字符的首地址 */
-	register Token *tp;		/* Tokenrow中的当前Token的pointer */
-	register Token *maxp;	/* Tokenrow中Token数组的最后一个元素的下一元素的首地址 */
-	int runelen;			/* TODO: 日尔曼字符的长度？ */
+	register Token *tp;		/* 得到Tokenrow的Token数组中最后一个有效Token的下一节点的首地址，我们要往tp指向的地方填充新的Token，所以tp也称做当前Token */
+	register Token *maxp;	/* Tokenrow中Token数组的总大小的下一元素的首地址,即： &trp->bp[trp->max] */
+	int runelen;			/* 日尔曼字符长度，例如：非宽字符的日尔曼字符长度为1,宽字符的日尔曼字符长度为2 */
 	Source *s = cursource;	/* 获得当前输入源栈顶节点的首地址 */
 	int nmac = 0;
 	extern char outbuf[];
 
-	tp = trp->lp; /* 拿到当前token row中有效数据的下一节点的首地址 */
+	/**
+	 * 得到Tokenrow的Token数组中最后一个有效Token的下一节点的首地址。
+	 * （一般来说，如果Tokenrow中没有有效Token，那么tp其实就是Token数组中的第一个元素的首地址）
+	 * 也可以说成是：得到将要被填入Tokenrow的Token首地址，也即：当前Token
+	 */
+	tp = trp->lp;
 	ip = s->inp; /* 拿到输入源缓冲区中当前正在处理的字符的首地址 */
 	if (reset) { /* 如果缓冲区可以被“重绕” */
 		s->lineinc = 0; /* 为续行符做调整 */
-		if (ip >= s->inl) { /* 如果缓冲区中无数据 */
-			s->inl = s->inb; /* 设置输入源缓冲区的当前指针为缓冲区的基地址 */
+		if (ip >= s->inl) { /* 如果输入源缓冲区中没有有效数据 */
+			s->inl = s->inb; /* 设置input last+1为缓冲区的基地址（换句话说，即：置空缓冲区） */
 			fillbuf(s); /* 从输入源加载数据到缓冲区中 */
 			ip = s->inp = s->inb; /* 设置ip重新指向缓冲区的基地址 */
-		} else if (ip >= s->inb+(3*INS/4)) { /* 如果缓冲区中有数据，但当前指针已经超过了buffer大小的3/4,那么开始“重绕” */
+		} else if (ip >= s->inb+(3*INS/4)) { /* 如果缓冲区中有数据，但当前指针已经超过了输入源缓冲区大小的3/4,那么开始“重绕” */
 			memmove(s->inb, ip, 4+s->inl-ip); /* 将缓冲区中还未扫描到的剩余有效数据复制到缓冲区开始 */
 			s->inl = s->inb+(s->inl-ip); /* 重新设置缓冲区末尾指针 */
-			ip = s->inp = s->inb; /* 重新设置缓冲区开始指针和当前指针 */
+			ip = s->inp = s->inb; /* 重新设置缓冲区的当前指针使其指向缓冲区的基地址 */
 		}
 	}
-	maxp = &trp->bp[trp->max]; /* 拿到Tokenrow最后一个元素的下一个元素的首地址(哨兵地址） */
-	runelen = 1; /* TODO: 日尔曼字符? */
+	maxp = &trp->bp[trp->max]; /* 拿到Tokenrow中Token数组的总大小的下一元素的首地址 */
+	runelen = 1; /* 设置日尔曼字符长度为1 */
 	for (;;) {
 	   continue2:
-		if (tp >= maxp) {
+		if (tp >= maxp) { /* 如果Tokenrow已满 */
 			trp->lp = tp; /* 保存当前token */
-			tp = growtokenrow(trp);
-			maxp = &trp->bp[trp->max];
+			tp = growtokenrow(trp); /* 增大Tokenrow的容量 */
+			maxp = &trp->bp[trp->max]; /* 更新Tokenrow中Token数组的总大小的下一元素的首地址 */
 		}
 		tp->type = UNCLASS; /* 初始为未归类的token type */
 		tp->hideset = 0; /* TODO: 什么是hideset？ */
-		tp->t = ip;
-		tp->wslen = 0;
+		tp->t = ip; /* 指向当前Token的字符串首地址，注意：该字符串并不是以空字符结尾的，该字符串的长度是以tp->len标定的. */
+		tp->wslen = 0; /* TODO: 啥是wslen？空白符的长度？ */
 		tp->flag = 0;
 		state = START;	/* 设置当前状态为START */
 		for (;;) {
@@ -476,16 +514,16 @@ int gettokens(Tokenrow *trp, int reset) {
 				goto continue2;
 
 			case S_NAME:	/* like S_SELFB but with nmac check */
-				tp->type = NAME;
-				tp->len = ip - tp->t;
-				nmac |= quicklook(tp->t[0], tp->len>1?tp->t[1]:0);
-				tp++;
+				tp->type = NAME; /* 设置当前Token的类型 */
+				tp->len = ip - tp->t; /* 设置当前Token的字符长度 */
+				nmac |= quicklook(tp->t[0], tp->len>1?tp->t[1]:0); /* TODO: 这是干嘛的？ */
+				tp++; /* 切换到下一个Token */
 				goto continue2;
 
-			case S_WS:
+			case S_WS: /* 空白符 */
 				tp->wslen = ip - tp->t;
-				tp->t = ip;
-				state = START;
+				tp->t = ip; /* 指向空白符之后的字符... */
+				state = START; /* 重置状态为开始状态 */
 				continue;
 
 			default:
@@ -496,7 +534,7 @@ int gettokens(Tokenrow *trp, int reset) {
 				}
 				state &= ~QBSBIT;
 				s->inp = ip;
-				if (c=='?') { 	/* check trigraph */
+				if (c=='?') { 	/* 检查三字符序列（check trigraph） */
 					if (trigraph(s)) {
 						state = oldstate;
 						continue;
@@ -629,24 +667,41 @@ int foldline(Source *s)
 	return 0;
 }
 
-int fillbuf(Source *s)
-{
+/**
+ * fillbuf - 填充新数据到输入源s的缓冲区中
+ * @s：输入源s
+ * 返回值： 如果fillbuf发现输入源s中已经没有更多的新数据,那么返回EOF（-1）;否则返回0
+ * 注意：每次最多填充缓冲区总容量的1/8到输入源的缓冲区中。
+ * 什么时候才会调用fillbuf呢？答：只有当缓冲区中没有有效数据时（例如遇到EOB）才会调用此函数。
+ * TODO： 如果输入源缓冲区中有有效数据时，调用该函数会发生什么情况呢？
+ * 答曰：会继续往输入源的缓冲区中附加数据直至缓冲区被塞满，因此当输入源的缓冲区满的时候，就是cpp程序当掉的时候！
+ * 换句话说lcc不能处理文件大于INS-INS/8的C源程序，而gcc在处理很大的C文件时是没有问题的.
+ */
+int fillbuf(Source *s) {
 	int n, nr;
 
 	nr = INS/8; /* 缓冲区大小的1/8 */
-	if ((char *)s->inl+nr > (char *)s->inb+INS) /* 若缓冲区的可用空间小于缓冲区容量的1/8 */
-		error(FATAL, "Input buffer overflow"); /* 则打印错误信息，并结束进程 */
+	/**
+	 * TODO：下面这个判断只是针对文件输入源的缓冲区来说的，换句话说：lcc最多只能处理一行小于INS-INS/8个字节的C源程序.
+	 * 如果我们写一个c源程序，令其中一行大于28K，那么cpp程序就会打印"Input buffer overflow"并当掉!
+	 * 有兴趣可以看看：testprog目录下的 generate_any_size_c_source_file.c 程序.
+	 * 如果命令行上的参数字串大于28K，那么这里就是一个bug！但实际上大多数操作系统配置（或shell配置）命令行字串不能大于4KB。
+	 * 如果我们把INS设置为4096,然后重编译cpp，然后运行testprog目录下的optarg_test.sh
+	 * 就会发现cpp程序会在if语句中当掉!
+	 */
+	if ((char *)s->inl+nr > (char *)s->inb+INS) /* 若缓冲区的可用空间小于缓冲区总容量的1/8 */
+		error(FATAL, "Input buffer overflow"); /* 则打印错误信息，并结束进程。 */
 	if (s->fd==NULL || (n=fread((char *)s->inl, 1, INS/8, s->fd)) <= 0) /* 读取INS/8个字节到缓冲区中（s->fd不为NULL时才调用fread） */
-		n = 0; /* 如果读取失败（fread返回值<=0）那么设置读取的字节数n为0 */
-	if ((*s->inp&0xff) == EOB) /* sentinel character appears in input */
+		n = 0; /* 如果输入源是字符串 或者 如果输入源是文件且从文件读取数据失败（fread返回值<=0）那么设置读取的字节数n为0 */
+	if ((*s->inp&0xff) == EOB) /* 在输入中遇到了哨兵字符（sentinel character appears in input） */
 		*s->inp = EOFC;
 	s->inl += n;
 	s->inl[0] = s->inl[1]= s->inl[2]= s->inl[3] = EOB;
-	if (n==0) {
+	if (n == 0) {
 		s->inl[0] = s->inl[1]= s->inl[2]= s->inl[3] = EOFC;
-		return EOF;
+		return EOF; /* 输入源s中已经没有更多的新数据供填充到缓冲区，那么返回-1 */
 	}
-	return 0;
+	return 0; /* 如果成功的往输入源缓冲区中填充了新数据，就返回0 */
 }
 
 /**
@@ -655,9 +710,9 @@ int fillbuf(Source *s)
  * @fd：输入源的文件指针
  * @str：预先往输入源中放置的待处理的字符串
  * 返回值： 返回新分配的输入源节点的首地址
- * Push down to new source of characters.
- * If fd!=NULL and str==NULL, then from a file `name';
- * if fd==NULL and str, then from the string.
+ * 注意：
+ * 如果fd等于NULL且str不为空，说明要压入的输入源只是一个缓冲区.
+ * 如果fd不等于NULL且str为空，说明要压入的输入源是一个文件，文件名为name.
  */
 Source * setsource(char *name, FILE *fd, char *str)
 {
@@ -670,14 +725,14 @@ Source * setsource(char *name, FILE *fd, char *str)
 	s->filename = name; /* 设置文件的名字 */
 	s->next = cursource; /* 头插法插入节点（此链表是一个栈） */
 	s->ifdepth = 0; /* 条件编译指令的陷入深度 */
-	cursource = s;  /* 设置当前源为新分配的节点 */
+	cursource = s;  /* 设置当前源为新分配的输入源节点 */
 	/* slop at right for EOB */
-	if (str) { /* 如果str不为空 */
+	if (str) { /* 如果str不为空（说明要压入的输入源只是一个缓冲区） */
 		len = strlen(str); /* 计算该str的字符串长度 */
 		s->inb = domalloc(len+4); /* 分配输入缓冲（之所以+4是因为，要在str后面放置4个哨兵字符） */
 		s->inp = s->inb; /* 设置输入源缓冲区的当前指针为新分配空间的基地址 */
 		strncpy((char *)s->inp, str, len); /* 将str复制到新分配的输入缓冲中去 */
-	} else { /* 如果str为空 */
+	} else { /* 如果str为空（说明要压入的输入源是一个文件，文件名为name） */
 		s->inb = domalloc(INS+4); /* 分配输入缓冲区 */
 		s->inp = s->inb; /* 设置输入源缓冲区的当前指针为新分配空间的基地址 */
 		len = 0; /* 设置len为0 */
