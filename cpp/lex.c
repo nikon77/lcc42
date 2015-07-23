@@ -81,10 +81,10 @@ enum state {
 	S_SELFB, /* 接受状态,需要进一步lookahead字符 */
 	S_EOF,	/* 文件结束状态(接受状态) */
 	S_NL,	/* 换行状态(接受状态) */
-	S_EOFSTR, /* 字符串(或字符常量)中出现了文件结束符的状态(接受状态,非法状态) */
+	S_EOFSTR, /* 字符串(或字符常量)中出现了文件结束符的状态(非法状态) */
 	S_STNL, /* 字符串(或字符常量)中出现了换行符的状态(接受状态,非法状态) */
-	S_COMNL, /* C注释中出现换行符.NOTE: C注释是允许跨行的(接受状态) */
-	S_EOFCOM, /* C注释（或C++注释）中遇到了文件结束符后的状态(接受状态，非法状态) */
+	S_COMNL, /* C注释中出现换行符.NOTE: C注释是允许跨行的(特殊状态) */
+	S_EOFCOM, /* C注释（或C++注释）中遇到了文件结束符后的状态(非法状态) */
 	S_COMMENT, /* C注释被接受的状态 */
 	S_EOB,	/* End Of Buffer 状态 */
 	S_WS,	/* 空白字符被接受状态 */
@@ -294,6 +294,7 @@ struct	fsm {
  */
 short	bigfsm[256][MAXSTATE];
 
+//#define DEBUG_FSM
 #ifdef DEBUG_FSM
 void print_fsm(struct fsm ar[],int n) {
 	int i,j;
@@ -316,12 +317,28 @@ void print_bigfsm() {
 	printf("bigfsm:\n");
 	for(i=0; i<256;i++) {
 		printf("%3d:",i);
-		for(j=0;j<32;j++) {
+		for(j=0;j<MAXSTATE;j++) {
 			if(j%10==0)
 			printf("[%d]",j);
 			printf("%04x,",(unsigned short)bigfsm[i][j]);
 		}
 		printf("\n");
+	}
+}
+
+#include <assert.h>
+
+void assert_bigfsm_flag() {
+	int indexi, indexj, msb, bit7;
+	for (indexi = 0; indexi < 256; indexi++) {
+		for (indexj = 0; indexj < MAXSTATE; indexj++) {
+			msb = (bigfsm[indexi][indexj] & 0x8000) >> 15;
+			bit7 = (bigfsm[indexi][indexj] & 0100) >> 6;
+			if (msb == 0 && bit7 == 0) assert(0);
+			if (msb == 0 && bit7 == 1) assert(0);
+			if (msb == 1 && bit7 == 0) assert(0);
+			if (msb == 1 && bit7 == 1) assert(0);
+		}
 	}
 }
 #endif /* DEBUG_FSM */
@@ -342,7 +359,7 @@ void expandlex(void) {
 		for (i=0; fp->ch[i]; i++) { /* 如果其下一字符不为0 */
 			nstate = fp->nextstate; /* 获取到它的下一状态(迁移状态) */
 			if (nstate >= S_SELF) /* 如果下一状态的值大于S_SELF,说明是接受状态（ACT包装的状态）或非法状态（大于等于32,且小于44） */
-				nstate = ~nstate; /* 对下一状态按位取反。为啥要取反？可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。（取反后，第7位由0变成了1） */
+				nstate = ~nstate; /* 对下一状态按位取反。为啥要取反？可以使接受状态（或非法状态）小于0,从而使得和非接受状态区分开来。（取反后，MSB为1,BIT7为1） */
 			switch (fp->ch[i]) {
 
 			case C_XX:		/* 如果下一字符是随机（任一）字符 */
@@ -364,22 +381,9 @@ void expandlex(void) {
 			}
 		}
 	}
-//	{
-//#include <assert.h>
-//		int indexi,indexj,msb,bit7;
-//		for(indexi=0;indexi<256;indexi++) {
-//			for(indexj=0;indexj<MAXSTATE;indexj++) {
-//
-//				msb = (bigfsm[indexi][indexj] & 0x8000)>>15;
-//				bit7 = (bigfsm[indexi][indexj] & 0100)>>6;
-//				if(msb==0&&bit7==1) assert(0);
-//				if(msb==1&&bit7==0) assert(0);
-//				if(msb==0&&bit7==0) assert(0);
-//				if(msb==1&&bit7==1) assert(0);
-//
-//			}
-//		}
-//	}
+#ifdef DEBUG_FSM
+	assert_bigfsm_flag();
+#endif
 	/**
 	 * 至此：bigfsm数组中每个元素的最高位（MSB：most significant bit）和第7位（从最低位开始数）构成以下了4种情况：
 	 * MSB     ：       BIT7
@@ -399,26 +403,24 @@ void expandlex(void) {
 	for (i=0; i < MAXSTATE; i++) { /* 对于每一状态i */
 		for (j=0; j<0xFF; j++) /* 查看该状态i的下一字符j */
 			if (j=='?' || j=='\\') { /* 如果该字符是'?'或'\\' */
-				if (bigfsm[j][i]>0) { /* 如果该状态i对应于字符j的迁移状态大于0（说明不是接受状态也不是非法状态，此时第7位是0，低6位小于32） */
-					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“迁移状态”各位按位取反,取反后该值最高位为1（即小于0）（将该“迁移状态”变成了需要做特殊处理的非法状态），而且第7位从0变成了1） */
-#include <assert.h>
-					printf("lower 6 bits = %d\n",0x003F & bigfsm[j][i]);
-					printf("higher 9 bits = %d\n",GETACT(bigfsm[j][i]));
-//					assert((0x003F & bigfsm[j][i])<=32);
-				}
+				if (bigfsm[j][i]>0) /* 如果该状态i对应于字符j的迁移状态大于0（说明不是接受状态也不是非法状态，此时第7位是0，低6位小于32） */
+					bigfsm[j][i] = ~bigfsm[j][i]; /* 将该“迁移状态”各位按位取反,取反后： MSB为1，BIT7也为1 */
 				bigfsm[j][i] &= ~QBSBIT; /* 再将该“迁移状态”的第7位清0 */
 			}
-		bigfsm[EOB][i] = ~S_EOB; /* 将状态i对应于字符EOB的迁移状态设置为S_EOB的取反（取反后，最高位为1,第7位为1） */
+		bigfsm[EOB][i] = ~S_EOB; /* 将状态i对应于字符EOB的迁移状态设置为S_EOB的取反（取反后，MSB为1,第7位为1） */
 		if (bigfsm[EOFC][i] >= 0) /* 如果状态i对应于字符EOFC的迁移状态大于0 */
 			bigfsm[EOFC][i] = ~S_EOF; /* 将S_EOF取反（取反后，第7位为1,最高位为1） */
 	}
+#ifdef DEBUG_FSM
+	assert_bigfsm_flag();
+#endif
 	/**
 	 * 综上：bigfsm数组中每个元素的最高位（MSB：most significant bit）和第7位（从最低位开始数）构成以下了4种情况：
 	 *   MSB     ：       BIT7
 	 *    0      ：        0    正常的状态变迁
-	 *    0      ：        1    XXX: “非法状态”，借机处理三字符序列，续行符，古日尔曼字母
-	 *    1      ：        0    XXX: 接受状态（一般的 接受状态 和 lookahead C_XX的接受状态）
-	 *    1      ：        1    非法状态（大于等于32,且小于44） 或 接受状态（ACT包装的接受状态）
+	 *    0      ：        1    这种情况不存在
+	 *    1      ：        0    借机处理三字符序列，续行符，古日尔曼字母（相当于一个HOOK）
+	 *    1      ：        1    非法状态（大于33且小于44） 或 接受状态（ACT包装的S_SELF或S_SELFB）
 	 */
 #ifdef DEBUG_FSM
 	print_bigfsm();
@@ -452,7 +454,7 @@ void fixlex(void) {
 int gettokens(Tokenrow *trp, int reset) {
 	register int c, state, oldstate;
 	register uchar *ip;		/* 输入源缓冲区中当前正在处理的字符的首地址 */
-	register Token *tp;		/* 得到Tokenrow的Token数组中最后一个有效Token的下一节点的首地址，我们要往tp指向的地方填充新的Token，所以tp也称做当前Token */
+	register Token *tp;		/* 指向当前要填写的Token结构，也称当前Token（Tokenrow的Token数组中最后一个有效Token的下一节点的首地址） */
 	register Token *maxp;	/* Tokenrow中Token数组的总大小的下一元素的首地址,即： &trp->bp[trp->max] */
 	int runelen;			/* 日尔曼字符长度，例如：非宽字符的日尔曼字符长度为1,宽字符的日尔曼字符长度为2 */
 	Source *s = cursource;	/* 获得当前输入源栈顶节点的首地址 */
@@ -490,7 +492,7 @@ int gettokens(Tokenrow *trp, int reset) {
 		tp->type = UNCLASS; /* 初始为未归类的token type */
 		tp->hideset = 0; /* TODO: 什么是hideset？ */
 		tp->t = ip; /* 指向当前Token的字符串首地址，注意：该字符串并不是以空字符结尾的，该字符串的长度是以tp->len标定的. */
-		tp->wslen = 0; /* TODO: 啥是wslen？空白符的长度？ */
+		tp->wslen = 0; /* 空白符的长度 */
 		tp->flag = 0;
 		state = START;	/* 设置当前状态为START */
 		for (;;) {
@@ -499,69 +501,74 @@ int gettokens(Tokenrow *trp, int reset) {
 			if ((state = bigfsm[c][state]) >= 0) { /* 如果迁移状态不为接受状态 */
 				ip += runelen; /* ip指向缓冲区中下一字符 */
 				runelen = 1;
-				continue; /* 开始下一循环 */
+				continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 			}
 			state = ~state; /* 此时的state是接受状态,对其取反后还原为原来的ACT合成的 tokentype（高9位）+接受状态（低7位）的形式 */
 		reswitch:
 			switch (state&0177) { /* 从state中过滤出接受状态 */
 			case S_SELF:
-				ip += runelen;
-				runelen = 1;
+				ip += runelen; /* ip指向输入源缓冲中的下一字符 */
+				runelen = 1; /* 日尔曼字符长度为1 */
 			case S_SELFB:
-				tp->type = GETACT(state);
-				tp->len = ip - tp->t;
-				tp++;
-				goto continue2;
+				tp->type = GETACT(state); /* 保存tokentype */
+				tp->len = ip - tp->t; /* 保存单词的字串长度 */
+				tp++; /* tp指向下一Token结构 */
+				goto continue2; /* 开始下一Token的识别 */
 
 			case S_NAME:	/* like S_SELFB but with nmac check */
 				tp->type = NAME; /* 设置当前Token的类型 */
 				tp->len = ip - tp->t; /* 设置当前Token的字符长度 */
 				nmac |= quicklook(tp->t[0], tp->len>1?tp->t[1]:0); /* TODO: 这是干嘛的？ */
-				tp++; /* 切换到下一个Token */
-				goto continue2;
+				tp++; /* tp指向下一Token结构 */
+				goto continue2; /* 开始下一Token的识别 */
 
 			case S_WS: /* 空白符 */
-				tp->wslen = ip - tp->t;
-				tp->t = ip; /* 指向空白符之后的字符... */
+				tp->wslen = ip - tp->t; /* 例如有一个序列： abc 123 ccc ，当扫描到abc后面的空格时，实际上这个空格的字串长度被填写到 `123' 这个单词的Token结构中去了。 */
+				tp->t = ip; /* 指向该空白符之后的字符 */
 				state = START; /* 重置状态为开始状态 */
-				continue;
+				continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 
-			default:
-				if ((state&QBSBIT)==0) {
+			default: /* 其实这个有点类似于硬件的异常处理的错误恢复机制... */
+				/**
+				 * 如果state的第7位为0
+				 * 第一次进入default分支时，state的QBSBIT(BIT7)位肯定为1,但越过if分支后马上该位被清零.
+				 * 但如果判定是三字符序列或续行符,马上流程还会回到这里的if判断.所以我说：`其实这个有点类似于硬件的异常处理的错误恢复机制'...
+				 */
+				if ((state&QBSBIT)==0) { /* 如果state的QBSBIT位为0,说明此时已经过了异常处理阶段，开始恢复正常的状态变迁 */
 					ip += runelen;
 					runelen = 1;
 					continue;
 				}
-				state &= ~QBSBIT;
-				s->inp = ip;
-				if (c=='?') { 	/* 检查三字符序列（check trigraph） */
-					if (trigraph(s)) {
-						state = oldstate;
-						continue;
+				state &= ~QBSBIT; /* 对state的第7位清零 */
+				s->inp = ip; /* 更新输入缓冲区的当前指针 */
+				if (c == '?') { 	/* 检查三字符序列（check trigraph） */
+					if (trigraph(s)) { /* 如果输入源中的当前序列是三字符序列 */
+						state = oldstate; /* 将旧状态恢复 */
+						continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 					}
-					goto reswitch;
+					goto reswitch; /* 如果不是三字符序列，那么就是普通的状态变迁，跳转到reswitch即可 */
 				}
-				if (c=='\\') { /* line-folding */
-					if (foldline(s)) {
-						s->lineinc++;
-						state = oldstate;
-						continue;
+				if (c=='\\') { /* line-folding,续行符 */
+					if (foldline(s)) { /* 如果输入源中的当前序列是续行符 */
+						s->lineinc++; /* 行号自加1（其实输入源的缓冲区是行缓冲区） */
+						state = oldstate; /* 将旧状态恢复 */
+						continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 					}
-					goto reswitch;
+					goto reswitch; /* 如果不是三字符序列，那么就是普通的状态变迁，跳转到reswitch即可 */
 				}
-				error(WARNING, "Lexical botch in cpp");
+				error(WARNING, "Lexical botch in cpp"); /* 遇到了模糊不清的token序列... */
 				ip += runelen;
 				runelen = 1;
 				continue;
 
-			case S_EOB:
-				s->inp = ip;
-				fillbuf(cursource);
-				state = oldstate;
-				continue;
+			case S_EOB: /* 缓冲区结尾： 一般来说，很可能是遇到了一行的末尾（因为lcc目前是行缓冲，最多只能处理一行为INS大小的c源程序） */
+				s->inp = ip; /* 设置输入源的当前指针为当前ip所指处，以便调用fillbuf */
+				fillbuf(cursource); /* 重新状态缓冲区 */
+				state = oldstate; /* 恢复旧状态 */
+				continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 
-			case S_EOF:
-				tp->type = END;
+			case S_EOF: /* 遇到了EOFC */
+				tp->type = END; /* token type 为 END */
 				tp->len = 0;
 				s->inp = ip;
 				if (tp!=trp->bp && (tp-1)->type!=NL && cursource->fd!=NULL)
@@ -569,23 +576,23 @@ int gettokens(Tokenrow *trp, int reset) {
 				trp->lp = tp+1;
 				return nmac;
 
-			case S_STNL:
-				error(ERROR, "Unterminated string or char const");
-			case S_NL:
+			case S_STNL: /* 字符串(或字符常量)中出现了换行符的状态(接受状态,非法状态) */
+				error(ERROR, "Unterminated string or char const"); /* 打印错误消息 */
+			case S_NL: /* 换行状态（遇到了换行符） */
 				tp->t = ip;
 				tp->type = NL;
 				tp->len = 1;
 				tp->wslen = 0;
-				s->lineinc++;
+				s->lineinc++; /* 行号加1 */
 				s->inp = ip+1;
 				trp->lp = tp+1;
-				return nmac;
+				return nmac; /* 从gettokens函数返回 */
 
-			case S_EOFSTR:
-				error(FATAL, "EOF in string or char constant");
+			case S_EOFSTR: /* 字符串(或字符常量)中出现了文件结束符的状态(非法状态) */
+				error(FATAL, "EOF in string or char constant"); /* 打印错误信息，并结束进程 */
 				break;
 
-			case S_COMNL:
+			case S_COMNL: /* C注释中出现换行符.NOTE: C注释是允许跨行的(接受状态) */
 				s->lineinc++;
 				state = COM2;
 				ip += runelen;
@@ -595,18 +602,18 @@ int gettokens(Tokenrow *trp, int reset) {
 					s->inl -= ip-tp->t;
 					ip = tp->t+1;
 				}
-				continue;
+				continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 
-			case S_EOFCOM:
+			case S_EOFCOM: /* C注释（或C++注释）中遇到了文件结束符后的状态(非法状态) */
 				error(WARNING, "EOF inside comment");
 				--ip;
-			case S_COMMENT:
+			case S_COMMENT: /* C注释被接受的状态 */
 				++ip;
 				tp->t = ip;
 				tp->t[-1] = ' ';
 				tp->wslen = 1;
 				state = START;
-				continue;
+				continue; /* 重新开始下一循环，但不 创建（或切换到下一Token结构）新的Token结构 */
 			}
 			break;
 		}
@@ -617,46 +624,48 @@ int gettokens(Tokenrow *trp, int reset) {
 	}
 }
 
-/* have seen ?; handle the trigraph it starts (if any) else 0 */
-int trigraph(Source *s)
-{
+/**
+ * trigraph - 判断输入源中碰到的当前序列是否是三字符序列
+ * @s: 输入源
+ * 返回值：返回0,说明不是三字符序列;不为0,返回值即为三字符序列所代表的字符值
+ */
+int trigraph(Source *s) {
 	int c;
 
-	while (s->inp+2 >= s->inl && fillbuf(s)!=EOF)
+	while (s->inp+2 >= s->inl && fillbuf(s)!=EOF) /* 尽量确保缓冲区中,字符'?'之后的两个字符在缓冲区中 */
 		;
-	if (s->inp[1]!='?')
-		return 0;
-	c = 0;
+	if (s->inp[1] != '?') /* 如果第一个'?'之后跟的不是'?' */
+		return 0; /* 返回0（说明不是三字符序列） */
+	c = 0; /* 如果序列是一个三字符序列，c将会被更新为三字符序列所代表的字符 */
 	switch(s->inp[2]) {
 	case '=':
-		c = '#'; break;
+		c = '#'; break; /* ??=代表# */
 	case '(':
-		c = '['; break;
+		c = '['; break; /* ??(代表[ */
 	case '/':
-		c = '\\'; break;
+		c = '\\'; break; /* ??/代表\ */
 	case ')':
-		c = ']'; break;
+		c = ']'; break; /* ??)代表] */
 	case '\'':
-		c = '^'; break;
+		c = '^'; break; /* ??'代表^ */
 	case '<':
-		c = '{'; break;
+		c = '{'; break; /* ??<代表{ */
 	case '!':
-		c = '|'; break;
+		c = '|'; break; /* ??!代表| */
 	case '>':
-		c = '}'; break;
+		c = '}'; break; /* ??>代表} */
 	case '-':
-		c = '~'; break;
+		c = '~'; break; /* ??-代表~ */
 	}
-	if (c) {
-		*s->inp = c;
-		memmove(s->inp+1, s->inp+3, s->inl-s->inp+2);
-		s->inl -= 2;
+	if (c) { /* 如果c不为0（说明序列是一个三字符序列） */
+		*s->inp = c; /* 将三字符序列所代表的字符拷贝至第一个字符处 */
+		memmove(s->inp+1, s->inp+3, s->inl-s->inp+2); /* 输入缓冲区的内容整体前移两个字符 */
+		s->inl -= 2; /* inl指针前进两个字符 */
 	}
 	return c;
 }
 
-int foldline(Source *s)
-{
+int foldline(Source *s) {
 	while (s->inp+1 >= s->inl && fillbuf(s)!=EOF)
 		;
 	if (s->inp[1] == '\n') {
@@ -675,7 +684,7 @@ int foldline(Source *s)
  * 什么时候才会调用fillbuf呢？答：只有当缓冲区中没有有效数据时（例如遇到EOB）才会调用此函数。
  * TODO： 如果输入源缓冲区中有有效数据时，调用该函数会发生什么情况呢？
  * 答曰：会继续往输入源的缓冲区中附加数据直至缓冲区被塞满，因此当输入源的缓冲区满的时候，就是cpp程序当掉的时候！
- * 换句话说lcc不能处理文件大于INS-INS/8的C源程序，而gcc在处理很大的C文件时是没有问题的.
+ * 换句话说lcc不能处理一行大于INS-INS/8的C源程序，而gcc在处理很大的C文件时是没有问题的.
  */
 int fillbuf(Source *s) {
 	int n, nr;

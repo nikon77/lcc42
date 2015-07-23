@@ -74,7 +74,7 @@ static const char wstab[] = {
 };
 
 /**
- * maketokenrow - 建立一个Token Row
+ * maketokenrow - 为Tokenrow结构分配Token数组
  * @size: 该Token Row的大小
  * @trp: Tokenrow结构
  * 注意：Tokenrow是可以动态扩展的
@@ -94,12 +94,10 @@ void maketokenrow(int size, Tokenrow *trp) {
  * @trp：要被增大的Tokenrow
  * 返回值：要写入Tokenrow的Token数组的新Token指针
  */
-#include <assert.h>
 Token * growtokenrow(Tokenrow *trp) {
 	int ncur = trp->tp - trp->bp;
 	int nlast = trp->lp - trp->bp;
 
-	assert(ncur == 0); /* 这一行是我加的，换句话说： trp->tp变量压根没啥用... */
 	trp->max = 3*trp->max/2 + 1; /* 增大1.5倍 */
 	trp->bp = (Token *)realloc(trp->bp, trp->max*sizeof(Token)); /* 扩大Tokenrow中的Token数组 */
 	if (trp->bp == NULL) /* 如果扩大数组失败 */
@@ -225,13 +223,12 @@ Tokenrow * copytokenrow(Tokenrow *dtr, Tokenrow *str)
 	return dtr;
 }
 
-/*
- * Produce a copy of a row of tokens.  Start at trp->tp.
- * The value strings are copied as well.  The first token
- * has WS available.
+/**
+ * normtokenrow - 复制trp中的Token节点到新分配的Tokenrow中去,并返回此新分配的Tokenrow结构的首地址
+ * @trp: 待被复制的Token row
+ * 返回值： 新分配的Token row
  */
-Tokenrow * normtokenrow(Tokenrow *trp)
-{
+Tokenrow * normtokenrow(Tokenrow *trp) {
 	Token *tp;
 	Tokenrow *ntrp = new(Tokenrow); /* 新建一个Tokenrow节点 */
 	int len;
@@ -241,25 +238,24 @@ Tokenrow * normtokenrow(Tokenrow *trp)
 		len = 1; /* 令个数为1 */
 	maketokenrow(len, ntrp); /* 在新分配的Tokenrow中分配len个Token元素 */
 	for (tp=trp->tp; tp < trp->lp; tp++) { /* 遍历trp中的Token元素 */
-		*ntrp->lp = *tp; /* 将tp指向的当前节点复制给lp指向的位置 */
+		*ntrp->lp = *tp; /* 将tp指向的当前节点复制给lp指向的位置（ntrp->lp指向将要被填写的Token结构首地址） */
 		if (tp->len) { /* 如果当前Token节点的字串长度不为0 */
 			ntrp->lp->t = newstring(tp->t, tp->len, 1); /* 将tp中的字符串复制到lp中 */
-			*ntrp->lp->t++ = ' '; /* 将该字符串结尾附加一个空格字符 */
-			if (tp->wslen) /* TODO: 这个wslen到底是干啥的？ */
-				ntrp->lp->wslen = 1;
+			*ntrp->lp->t++ = ' '; /* 在该字符串开头附加一个空格字符 */
+			if (tp->wslen) /* 如果这个Token前面有空白符 */
+				ntrp->lp->wslen = 1; /* 设置Token里的空白符个数为1 */
 		}
-		ntrp->lp++; /* lp移动到下一节点 */
+		ntrp->lp++; /* ntrp->lp移动到下一将要被填写的Token结构的首地址 */
 	}
-	if (ntrp->lp > ntrp->bp) /* TODO: 这个wslen到底是干啥的？ */
-		ntrp->bp->wslen = 0;
+	if (ntrp->lp > ntrp->bp) /* 比如命令行上有 -DABC=1 时，会满足此条件语句。 但c源程序中的#define ABC 这样的宏定义指令显然不满足此条件因此不会进入if分支 */
+		ntrp->bp->wslen = 0; /* 很显然Token ABC前面没有空格.因此wslen为0 */
 	return ntrp; /* 返回新建的Tokenrow节点的首地址 */
 }
 
 /*
  * Debugging
  */
-void peektokens(Tokenrow *trp, char *str)
-{
+void peektokens(Tokenrow *trp, char *str) {
 	Token *tp;
 
 	tp = trp->tp; /* 得到token row中当前Token结构的首地址 */
@@ -286,8 +282,7 @@ void peektokens(Tokenrow *trp, char *str)
 	fflush(stderr);
 }
 
-void puttokens(Tokenrow *trp)
-{
+void puttokens(Tokenrow *trp) {
 	Token *tp;
 	int len;
 	uchar *p;
@@ -323,8 +318,7 @@ void puttokens(Tokenrow *trp)
 		flushout();
 }
 
-void flushout(void)
-{
+void flushout(void) {
 	if (wbp > wbuf) {
 		fwrite(wbuf, 1, wbp-wbuf, stdout);
 		fflush(stdout);
@@ -335,15 +329,18 @@ void flushout(void)
 /*
  * turn a row into just a newline
  */
-void setempty(Tokenrow *trp)
-{
+void setempty(Tokenrow *trp) {
 	trp->tp = trp->bp;
 	trp->lp = trp->bp+1;
 	*trp->bp = nltoken;
 }
 
-/*
- * 将数值n转化为字符串输出
+/**
+ * outnum - 将数值n转化为字符串输出
+ * @p: 存储数值n被转化后的字符串
+ * @n: 要被转化为字符串的数值n
+ * 返回值: 指向被转化后的字符串的结尾.
+ * 如果还是看不懂这个函数，请参看testprog/test_outnum.c文件，其中对outnum函数进行了测试.
  */
 char * outnum(char *p, int n) {
 	if (n >= 10)
@@ -352,12 +349,14 @@ char * outnum(char *p, int n) {
 	return p;
 }
 
-/*
- * allocate and initialize a new string from s, of length l, at offset o
- * Null terminated.
+/**
+ * newstring - 将字符串s复制到新分配空间中偏移为o的位置,并返回此新分配空间的首地址
+ * @s: 待复制的字符串
+ * @l: 字符串的长度
+ * @o: 字符串在新分配空间中的偏移位置
+ * 返回值: 新分配空间的首地址
  */
-uchar * newstring(uchar *s, int l, int o)
-{
+uchar * newstring(uchar *s, int l, int o) {
 	uchar *ns = (uchar *)domalloc(l+o+1);
 
 	ns[l+o] = '\0';

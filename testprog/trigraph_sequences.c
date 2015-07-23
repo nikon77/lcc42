@@ -9,3 +9,5 @@ int var1 = 2??'1; /* ??'代表^ 是按位异或的意思 */
 int var2 = 1??!2; /* ??!代表| 是按位或的意思 */
 int var3 = ??-7;  /* ??-代表~ 是按位取反的意思 */
 char *string1 = "hello??/tworld"; /* ??/是\的意思,和后面的t合起来就是\t */
+
+int main(void) { return 0; }

@@ -1,0 +1,2 @@
+#define ABC 
+int a;

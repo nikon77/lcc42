@@ -127,7 +127,7 @@ typedef struct token {
 	unsigned short	hideset;	/* TODO: 隐藏集合? */
 	unsigned int	wslen;		/* 该Token的字串中最前面的空白符字符的长度 */
 	unsigned int	len;		/* Token的字符长度 */
-	uchar	*t;					/* Token字串（注意：这个字串不一定是以空字符结尾） */
+	uchar	*t;					/* 指向Token字串的第一个字符（注意：这个字串不一定是以空字符结尾） */
 } Token;
 
 /**
@@ -135,7 +135,7 @@ typedef struct token {
  * 注意：Tokenrow中的数据是可扩展的.
  */
 typedef struct tokenrow {
-	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan)TODO: 这个变量压根没啥用 */
+	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan) */
 	Token	*bp;		/* Token数组的基地址(base of allocated value) */
 	Token	*lp;		/* Token数组中有效节点区域的最后一个节点的下一节点的首地址(last+1 token used) */
 	int	max;			/* 数组中Token的个数(number allocated) */

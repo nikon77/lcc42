@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
 	setbuf(stderr, ebuf);	/* 设定标准错误的输出缓冲区为ebuf */
 	t = time(NULL);			/* 获得当前时间的整数值 */
-	curtime = ctime(&t);	/* 获得当前时间的字串值(例如: Sat Jul  4 12:27:13 2014)保存到全局变量curtime中 */
+	curtime = ctime(&t);	/* 获得当前时间的字串值(例如: Sat Jul  4 12:27:13 2003)保存到全局变量curtime中 */
 	maketokenrow(3, &tr);	/* 建立一个 token row（默认分配3个Token结构） */
 	expandlex();			/* 展开状态机 */
 	setup(argc, argv);		/* 建立关键字hash表;处理命令行选项参数;将输入源文件压栈 */

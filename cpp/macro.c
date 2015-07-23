@@ -84,18 +84,21 @@ void dodefine(Tokenrow *trp)
 	np->flag |= ISDEFINED;
 }
 
-/*
- * Definition received via -D or -U
+/**
+ * doadefine - 定义一个通过命令行选项 -D 或 -U 定义的宏
+ * @trp: Token row
+ * @type: 'D' or 'U'
+ * 返回值：无
  */
 void doadefine(Tokenrow *trp, int type) {
 	Nlist *np;
 	static unsigned char one[] = "1";
 	static Token onetoken[1] = {{ NUMBER, 0, 0, 0, 1, one }};
-	static Tokenrow onetr = { onetoken, onetoken, onetoken+1, 1 };
+	static Tokenrow onetr = { onetoken, onetoken, onetoken+1, 1 }; /* 定义一个macro的默认值 */
 
 	trp->tp = trp->bp; /* 重置token row中的当前指针为token row中Token数组的基地址 */
 	if (type=='U') { /* 如果是取消一个标识符定义 */
-		if (trp->lp-trp->tp != 2 || trp->tp->type!=NAME) /* 一般来说token row中有两个Token（一个被定义的标识符名称字串;一个END类型的Token） */
+		if (trp->lp-trp->tp != 2 || trp->tp->type!=NAME) /* 一般来说token row中有两个Token（一个被取消定义的标识符名称字串 和 一个END类型的Token） */
 			goto syntax; /* 代码如果执行到该行，说明命令行上有语法错误 */
 		if ((np = lookup(trp->tp, 0)) == NULL) /* 如果在标识符hash表中没有找到该标识符 */
 			return; /* 那么直接返回函数即可 */
@@ -105,19 +108,19 @@ void doadefine(Tokenrow *trp, int type) {
 	/* 下面是'D'部分 */
 	if (trp->tp >= trp->lp || trp->tp->type!=NAME) /* 如果token row中无元素或者token row的当前Token不是类型为NAME的Token */
 		goto syntax; /* 打印错误信息，退出进程 */
-	np = lookup(trp->tp, 1); /* 查找（插入）该Token到标识符hash表中 */
+	np = lookup(trp->tp, 1); /* 查找并插入该Token到标识符hash表中 */
 	np->flag |= ISDEFINED; /* 设置ISDEFINED标志位 */
 	trp->tp += 1; /* 移动tp使其指向token row中的下一个Token处（通常是类型为ASGN的Token，即: '='） */
 	if (trp->tp >= trp->lp || trp->tp->type==END) { /* 如果标识符没有对应的值 */
 		np->vp = &onetr; /* 那么默认定义其值为"1" */
 		return; /* 返回函数 */
 	}
-	if (trp->tp->type!=ASGN) /* 如果此Token不等于ASGN(赋值) Token */
+	if (trp->tp->type!=ASGN) /* 如果标识符有对应的值，且此Token不等于ASGN(赋值) Token */
 		goto syntax; /* 打印错误信息，并退出进程 */
-	trp->tp += 1; /* /* 移动tp使其指向token row中的下一个Token处(即Value部分) */
+	trp->tp += 1; /* 移动tp使其指向token row中的下一个Token处(即Value部分) */
 	if ((trp->lp-1)->type == END) /* 如果lp指向Token的前一个Token是END Token（EOFC Token） */
-		trp->lp -= 1; /* 令lp指向 END Token（EOFC Token） */
-	np->vp = normtokenrow(trp); /* 将NAME对应的VALUE赋值给vp */
+		trp->lp -= 1; /* 令lp指向 END Token（EOFC Token），以方便调用normtokenrow函数完成赋值过程 */
+	np->vp = normtokenrow(trp); /* 将NAME对应的VALUE赋值给vp（normtokenrow实际要执行循环宏展开） */
 	return; /* 返回 */
 syntax:
 	error(FATAL, "Illegal -D or -U argument %r", trp); /* 打印错误信息，并退出进程 */
