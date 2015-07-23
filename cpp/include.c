@@ -83,6 +83,11 @@ void doinclude(Tokenrow *trp) {
 /**
  * 为当前输入源产生一个行控制指令信息
  * Generate a line directive for cursource
+ * TODO: 一般来说像gcc或者tcc之类的编译器产生的行控制指令是类似如下这样的：
+ * # 3 "cpp_line_control.c" 2
+ * 而像lcc这样的编译器产生的行控制指令是类似如下这样的：
+ * #line 2 "cpp_line_control.c"
+ * 也就是说lcc产生的行控制信息中多了一个 line （而这其实是可选的单词）而且也少了flag信息，具体请参考testprog/c预处理小知识.txt一文
  */
 void genline(void) {
 	static Token ta = { UNCLASS };

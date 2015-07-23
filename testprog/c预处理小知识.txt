@@ -1,0 +1,39 @@
+1. c预处理器
+c预处理器提供了4种独立的机制: 头文件包含，宏展开，条件编译，行控制。通常情况下c预处理机制是处于非活动状态的(inactive),除非你指定预处理指令请求它开始工作.但是在以下3种情况下即使没有预处理指令,c预处理器同样开始转化代码（transformations）:
+第一种,所有的C注释被替换为单个空格;
+第二种，续行符被删除，不管它处于何处;
+第三种，预定义的宏名被展开。
+而且第一种和第二种优先于所有的解析过程和宏指令展开.但是这些转化，仍旧有一些例外：
+第一：C注释和预定义的宏名不能在#include指令的尖括号中被识别.但在lcc的预处理中类似#include <std/*this is a comment*/io.h>这样的情况是被正常识别为#include <stdio.h>的。
+第二：C注释和预定义的宏名不能在一个字符或字符串常量中被识别.
+第三：在一个三字符序列中不能使用续行符.
+
+2. 预处理指令
+一个预处理指令在正常情况下不能跨越多行。但可以使用续行符使其延续多行。
+
+3. #line 关键字
+`#line' is a directive that specifies the original line number and source file name for subsequent input in the current preprocessor input file. `#line' has three variants:
+
+#line linenum
+Here linenum is a decimal integer constant. This specifies that the line number of the following line of input, in its original source file, was linenum.
+
+#line linenum filename
+Here linenum is a decimal integer constant and filename is a string constant. This specifies that the following line of input came originally from source file filename and its line number there was linenum. Keep in mind that filename is not just a file name; it is surrounded by doublequote characters so that it looks like a string constant.
+
+#line anything else
+anything else is checked for macro calls, which are expanded. The result should be a decimal integer constant followed optionally by a string constant, as described above.
+
+4. cpp输出的行控制（line control）信息
+例如，我们经常见到cpp的输出的行信息，如下：
+# 912 "/usr/include/stdio.h" 3 4
+它有如下的“形式”：
+# linenum filename flags
+其中：912代表的就是linenum，意思是接下来处理的文件是"/usr/include/stdio.h"的912行，而后面的3和4实际是flag，它意味着：
+After the file name comes zero or more flags, which are `1', `2', `3', or `4'. If there are multiple flags, spaces separate them. Here is what the flags mean:
+`1': 表明开始一个新文件.
+`2': 表明返回到原来的文件（在包含了其他文件之后）
+`3': 这表明接下来的行来自一个系统头文件，所以cpp在处理其中的信息时，一些特定的警告信息将不会显示出来。
+`4': 这表明接下来的行应被当作C语言来处理.
+
+
+
