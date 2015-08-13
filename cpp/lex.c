@@ -34,7 +34,7 @@
 
 #define		MAXSTATE		32				/* 最大的状态  */
 #define		ACT(tok,act)	((tok<<7)+act)	/* 合成ACT(tok是toktype类型,占据高9位;act是action,类型是emun state) */
-#define		QBSBIT			0100			/* 8进制，因此是第7位 */
+#define		QBSBIT			0100			/* 8进制，因此是第7位(三字符序列或续行符判断标志位) */
 #define		GETACT(st)		(st>>7)&0x1ff	/* 得到ACT(ACT其实就是一个tokentype)，过滤出16位中的高9位 */
 
 /* 字符类(character classes) */

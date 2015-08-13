@@ -71,7 +71,9 @@ void setup_kwtab(void) {
 
 /**
  * lookup - 在hash表中查找token或将token（转化为Nlist结构）插入到hash表
+ * @tp: 要插入或查找的token节点
  * @install: 当install=0时，表示查询hash表;当install=1时，表示将token插入hash表
+ * 返回值: 没找到节点，返回NULL。如果找到了节点或成功插入节点，则返回该节点的首地址.
  */
 Nlist * lookup(Token *tp, int install) {
 	unsigned int h;	/* 存储字符串的hash值 */

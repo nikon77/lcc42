@@ -76,7 +76,7 @@ static const char wstab[] = {
 /**
  * maketokenrow - 为Tokenrow结构分配Token数组
  * @size: 该Token Row的大小
- * @trp: Tokenrow结构
+ * @trp: Tokenrow结构的首地址
  * 注意：Tokenrow是可以动态扩展的
  */
 void maketokenrow(int size, Tokenrow *trp) {

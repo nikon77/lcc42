@@ -135,7 +135,7 @@ typedef struct token {
  * 注意：Tokenrow中的数据是可扩展的.
  */
 typedef struct tokenrow {
-	Token	*tp;		/* 当前（或将要）被扫描的Token(current one to scan) */
+	Token	*tp;		/* 当前要被扫描的Token(current one to scan) */
 	Token	*bp;		/* Token数组的基地址(base of allocated value) */
 	Token	*lp;		/* Token数组中有效节点区域的最后一个节点的下一节点的首地址(last+1 token used) */
 	int	max;			/* 数组中Token的个数(number allocated) */

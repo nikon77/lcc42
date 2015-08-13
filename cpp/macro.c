@@ -3,85 +3,86 @@
 #include <string.h>
 #include "cpp.h"
 
-/*
- * do a macro definition.  tp points to the name being defined in the line
+/**
+ * dodefine - 通过define指令定义一个宏
+ * @trp: Tokenrow
+ * 返回值: 无.
  */
-void dodefine(Tokenrow *trp)
-{
+void dodefine(Tokenrow *trp) {
 	Token *tp;
 	Nlist *np;
 	Tokenrow *def, *args;
 
-	tp = trp->tp+1;
-	if (tp>=trp->lp || tp->type!=NAME) {
-		error(ERROR, "#defined token is not a name");
-		return;
+	tp = trp->tp + 1; /* tp指向宏名 */
+	if (tp >= trp->lp || tp->type != NAME) { /* 检查语法 */
+		error(ERROR, "#defined token is not a name"); /* 打印错误信息 */
+		return; /* 函数返回 */
 	}
-	np = lookup(tp, 1);
-	if (np->flag&ISUNCHANGE) {
-		error(ERROR, "#defined token %t can't be redefined", tp);
-		return;
+	np = lookup(tp, 1); /* 插入该宏名到hash表中 */
+	if (np->flag & ISUNCHANGE) { /* 如果该宏名无法被重新定义（宏只读） */
+		error(ERROR, "#defined token %t can't be redefined", tp); /* 打印错误信息 */
+		return; /* 函数返回 */
 	}
-	/* collect arguments */
+	/* 下面开始收集宏的参数 */
 	tp += 1;
 	args = NULL;
-	if (tp<trp->lp && tp->type==LP && tp->wslen==0) {
+	if (tp < trp->lp && tp->type == LP && tp->wslen == 0) {
 		/* macro with args */
-		int narg = 0;
-		tp += 1;
-		args = new(Tokenrow);
-		maketokenrow(2, args);
-		if (tp->type!=RP) {
-			int err = 0;
-			for (;;) {
+		int narg = 0; /* 已处理的宏参数个数 */
+		tp += 1; /* 指针移动到左括号的下一个Token */
+		args = new(Tokenrow); /* 新建一个Tokenrow结构(用来保存宏的参数列表) */
+		maketokenrow(2, args); /* 在新建的Tokenrow中分配两个Token(默认两个参数) */
+		if (tp->type != RP) { /* 如果当前Token不是右括号 */
+			int err = 0; /* 错误数 */
+			for (;;) { /* 循环收集宏参数 */
 				Token *atp;
-				if (tp->type!=NAME) {
-					err++;
-					break;
+				if (tp->type != NAME) { /* 如果当前Token不是标识符 */
+					err++; /* 错误数加1 */
+					break; /* 结束for循环 */
 				}
-				if (narg>=args->max)
-					growtokenrow(args);
-				for (atp=args->bp; atp<args->lp; atp++)
-					if (atp->len==tp->len
-					 && strncmp((char*)atp->t, (char*)tp->t, tp->len)==0)
-						error(ERROR, "Duplicate macro argument");
-				*args->lp++ = *tp;
-				narg++;
-				tp += 1;
-				if (tp->type==RP)
-					break;
-				if (tp->type!=COMMA) {
-					err++;
-					break;
+				if (narg >= args->max) /* 如果已处理的宏参数个数超过Tokrnrow的容量 */
+					growtokenrow(args); /* 那么扩展Tokenrow */
+				for (atp = args->bp; atp < args->lp; atp++)
+					if (atp->len == tp->len
+							&& strncmp((char*) atp->t, (char*) tp->t, tp->len)
+									== 0) /* 如果该宏定义中有重名的参数 */
+						error(ERROR, "Duplicate macro argument"); /* 则打印错误信息 */
+				*args->lp++ = *tp; /* 复制宏的参数名到args中 */
+				narg++; /* 宏参数个数加1 */
+				tp += 1; /* tp指针指向下一个Token */
+				if (tp->type == RP) /* 如果当前Token是右括号 */
+					break; /* 结束for循环 */
+				if (tp->type != COMMA) { /* 如果当前Token不是逗号(参数分隔符) */
+					err++; /* 错误数加1 */
+					break; /* 结束for循环 */
 				}
-				tp += 1;
+				tp += 1; /* tp指针指向下一个参数 */
 			}
-			if (err) {
-				error(ERROR, "Syntax error in macro parameters");
-				return;
+			if (err) { /* 如果错误数不等于0 */
+				error(ERROR, "Syntax error in macro parameters"); /* 打印错误信息 */
+				return; /* 函数返回 */
 			}
 		}
 		tp += 1;
 	}
-	trp->tp = tp;
-	if (((trp->lp)-1)->type==NL)
+	trp->tp = tp; /* 更新trp的当前Token pointer为tp的值 */
+	if (((trp->lp) - 1)->type == NL) /* 令lp指向最后换行符Token */
 		trp->lp -= 1;
-	def = normtokenrow(trp);
-	if (np->flag&ISDEFINED) {
-		if (comparetokens(def, np->vp)
-		 || (np->ap==NULL) != (args==NULL)
-		 || np->ap && comparetokens(args, np->ap))
-			error(ERROR, "Macro redefinition of %t", trp->bp+2);
+	def = normtokenrow(trp); /* 复制宏的定义部分到def中去 */
+	if (np->flag & ISDEFINED) { /* 如果宏之前被定义过了 */
+		if (comparetokens(def, np->vp) || (np->ap == NULL) != (args == NULL)
+				|| np->ap && comparetokens(args, np->ap)) /* 如果宏的新定义和前一个定义不相同 */
+			error(ERROR, "Macro redefinition of %t", trp->bp + 2); /* 打印宏被重定义的错误信息 */
 	}
-	if (args) {
+	if (args) { /* 如果该宏有参数列表 */
 		Tokenrow *tap;
-		tap = normtokenrow(args);
-		dofree(args->bp);
-		args = tap;
+		tap = normtokenrow(args); /* 将参数列表复制到tap中去 */
+		dofree(args->bp); /* 释放args中的Token数组所占用的内存 */
+		args = tap; /* 回存 */
 	}
-	np->ap = args;
-	np->vp = def;
-	np->flag |= ISDEFINED;
+	np->ap = args; /* 保存宏的参数列表部分 */
+	np->vp = def; /* 保存宏的定义部分 */
+	np->flag |= ISDEFINED; /* 设置宏被定义的标志位 */
 }
 
 /**
@@ -93,73 +94,73 @@ void dodefine(Tokenrow *trp)
 void doadefine(Tokenrow *trp, int type) {
 	Nlist *np;
 	static unsigned char one[] = "1";
-	static Token onetoken[1] = {{ NUMBER, 0, 0, 0, 1, one }};
-	static Tokenrow onetr = { onetoken, onetoken, onetoken+1, 1 }; /* 定义一个macro的默认值 */
+	static Token onetoken[1] = { { NUMBER, 0, 0, 0, 1, one } };
+	static Tokenrow onetr = { onetoken, onetoken, onetoken + 1, 1 }; /* 定义一个macro的默认值 */
 
 	trp->tp = trp->bp; /* 重置token row中的当前指针为token row中Token数组的基地址 */
-	if (type=='U') { /* 如果是取消一个标识符定义 */
-		if (trp->lp-trp->tp != 2 || trp->tp->type!=NAME) /* 一般来说token row中有两个Token（一个被取消定义的标识符名称字串 和 一个END类型的Token） */
-			goto syntax; /* 代码如果执行到该行，说明命令行上有语法错误 */
+	if (type == 'U') { /* 如果是取消一个标识符定义 */
+		if (trp->lp - trp->tp != 2 || trp->tp->type != NAME) /* 一般来说token row中有两个Token（一个被取消定义的标识符名称字串 和 一个END类型的Token） */
+			goto syntax;
+		/* 代码如果执行到该行，说明命令行上有语法错误 */
 		if ((np = lookup(trp->tp, 0)) == NULL) /* 如果在标识符hash表中没有找到该标识符 */
 			return; /* 那么直接返回函数即可 */
 		np->flag &= ~ISDEFINED; /* 如果在标识符hash表中找到了该标识符，那么取消该标识符的定义 */
 		return; /* 返回函数 */
 	}
 	/* 下面是'D'部分 */
-	if (trp->tp >= trp->lp || trp->tp->type!=NAME) /* 如果token row中无元素或者token row的当前Token不是类型为NAME的Token */
-		goto syntax; /* 打印错误信息，退出进程 */
+	if (trp->tp >= trp->lp || trp->tp->type != NAME) /* 如果token row中无元素或者token row的当前Token不是类型为NAME的Token */
+		goto syntax;
+	/* 打印错误信息，退出进程 */
 	np = lookup(trp->tp, 1); /* 查找并插入该Token到标识符hash表中 */
 	np->flag |= ISDEFINED; /* 设置ISDEFINED标志位 */
 	trp->tp += 1; /* 移动tp使其指向token row中的下一个Token处（通常是类型为ASGN的Token，即: '='） */
-	if (trp->tp >= trp->lp || trp->tp->type==END) { /* 如果标识符没有对应的值 */
+	if (trp->tp >= trp->lp || trp->tp->type == END) { /* 如果标识符没有对应的值 */
 		np->vp = &onetr; /* 那么默认定义其值为"1" */
 		return; /* 返回函数 */
 	}
-	if (trp->tp->type!=ASGN) /* 如果标识符有对应的值，且此Token不等于ASGN(赋值) Token */
-		goto syntax; /* 打印错误信息，并退出进程 */
+	if (trp->tp->type != ASGN) /* 如果标识符有对应的值，且此Token不等于ASGN(赋值) Token */
+		goto syntax;
+	/* 打印错误信息，并退出进程 */
 	trp->tp += 1; /* 移动tp使其指向token row中的下一个Token处(即Value部分) */
-	if ((trp->lp-1)->type == END) /* 如果lp指向Token的前一个Token是END Token（EOFC Token） */
+	if ((trp->lp - 1)->type == END) /* 如果lp指向Token的前一个Token是END Token（EOFC Token） */
 		trp->lp -= 1; /* 令lp指向 END Token（EOFC Token），以方便调用normtokenrow函数完成赋值过程 */
 	np->vp = normtokenrow(trp); /* 将NAME对应的VALUE赋值给vp（normtokenrow实际要执行循环宏展开） */
 	return; /* 返回 */
-syntax:
-	error(FATAL, "Illegal -D or -U argument %r", trp); /* 打印错误信息，并退出进程 */
+	syntax: error(FATAL, "Illegal -D or -U argument %r", trp); /* 打印错误信息，并退出进程 */
 }
-			
+
 /*
  * Do macro expansion in a row of tokens.
  * Flag is NULL if more input can be gathered.
  */
-void expandrow(Tokenrow *trp, char *flag)
-{
+void expandrow(Tokenrow *trp, char *flag) {
 	Token *tp;
 	Nlist *np;
 
 	if (flag)
 		setsource(flag, NULL, "");
-	for (tp = trp->tp; tp<trp->lp; ) {
-		if (tp->type!=NAME
-		 || quicklook(tp->t[0], tp->len>1?tp->t[1]:0)==0
-		 || (np = lookup(tp, 0))==NULL
-		 || (np->flag&(ISDEFINED|ISMAC))==0
-		 || tp->hideset && checkhideset(tp->hideset, np)) {
+	for (tp = trp->tp; tp < trp->lp;) {
+		if (tp->type != NAME || quicklook(tp->t[0], tp->len>1?tp->t[1]:0) == 0
+				|| (np = lookup(tp, 0)) == NULL
+				|| (np->flag & (ISDEFINED | ISMAC)) == 0
+				|| tp->hideset && checkhideset(tp->hideset, np)) {
 			tp++;
 			continue;
 		}
 		trp->tp = tp;
-		if (np->val==KDEFINED) {
+		if (np->val == KDEFINED) {
 			tp->type = DEFINED;
-			if ((tp+1)<trp->lp && (tp+1)->type==NAME)
-				(tp+1)->type = NAME1;
-			else if ((tp+3)<trp->lp && (tp+1)->type==LP
-			 && (tp+2)->type==NAME && (tp+3)->type==RP)
-				(tp+2)->type = NAME1;
+			if ((tp + 1) < trp->lp && (tp + 1)->type == NAME)
+				(tp + 1)->type = NAME1;
+			else if ((tp + 3) < trp->lp && (tp + 1)->type == LP
+					&& (tp + 2)->type == NAME && (tp + 3)->type == RP)
+				(tp + 2)->type = NAME1;
 			else
 				error(ERROR, "Incorrect syntax for `defined'");
 			tp++;
 			continue;
 		}
-		if (np->flag&ISMAC)
+		if (np->flag & ISMAC)
 			builtin(trp, np->val);
 		else {
 			expand(trp, np);
@@ -175,20 +176,19 @@ void expandrow(Tokenrow *trp, char *flag)
  * Return trp->tp at the first token next to be expanded
  * (ordinarily the beginning of the expansion)
  */
-void expand(Tokenrow *trp, Nlist *np)
-{
+void expand(Tokenrow *trp, Nlist *np) {
 	Tokenrow ntr;
 	int ntokc, narg, i;
 	Token *tp;
-	Tokenrow *atr[NARG+1];
+	Tokenrow *atr[NARG + 1];
 	int hs;
 
-	copytokenrow(&ntr, np->vp);		/* copy macro value */
-	if (np->ap==NULL)			/* parameterless */
+	copytokenrow(&ntr, np->vp); /* copy macro value */
+	if (np->ap == NULL) /* parameterless */
 		ntokc = 1;
 	else {
 		ntokc = gatherargs(trp, atr, &narg);
-		if (narg<0) {			/* not actually a call (no '(') */
+		if (narg < 0) { /* not actually a call (no '(') */
 			/* gatherargs has already pushed trp->tr to the next token */
 			return;
 		}
@@ -198,17 +198,17 @@ void expand(Tokenrow *trp, Nlist *np)
 			trp->tp += ntokc;
 			return;
 		}
-		substargs(np, &ntr, atr);	/* put args into replacement */
-		for (i=0; i<narg; i++) {
+		substargs(np, &ntr, atr); /* put args into replacement */
+		for (i = 0; i < narg; i++) {
 			dofree(atr[i]->bp);
 			dofree(atr[i]);
 		}
 	}
-	doconcat(&ntr);				/* execute ## operators */
+	doconcat(&ntr); /* execute ## operators */
 	hs = newhideset(trp->tp->hideset, np);
-	for (tp=ntr.bp; tp<ntr.lp; tp++) {	/* distribute hidesets */
-		if (tp->type==NAME) {
-			if (tp->hideset==0)
+	for (tp = ntr.bp; tp < ntr.lp; tp++) { /* distribute hidesets */
+		if (tp->type == NAME) {
+			if (tp->hideset == 0)
 				tp->hideset = hs;
 			else
 				tp->hideset = unionhideset(tp->hideset, hs);
@@ -219,15 +219,14 @@ void expand(Tokenrow *trp, Nlist *np)
 	trp->tp -= rowlen(&ntr);
 	dofree(ntr.bp);
 	return;
-}	
+}
 
 /*
  * Gather an arglist, starting in trp with tp pointing at the macro name.
  * Return total number of tokens passed, stash number of args found.
  * trp->tp is not changed relative to the tokenrow.
  */
-int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
-{
+int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg) {
 	int parens = 1;
 	int ntok = 0;
 	Token *bp, *lp;
@@ -235,22 +234,22 @@ int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
 	int ntokp;
 	int needspace;
 
-	*narg = -1;			/* means that there is no macro call */
+	*narg = -1; /* means that there is no macro call */
 	/* look for the ( */
 	for (;;) {
 		trp->tp++;
 		ntok++;
 		if (trp->tp >= trp->lp) {
 			gettokens(trp, 0);
-			if ((trp->lp-1)->type==END) {
+			if ((trp->lp - 1)->type == END) {
 				trp->lp -= 1;
 				trp->tp -= ntok;
 				return ntok;
 			}
 		}
-		if (trp->tp->type==LP)
+		if (trp->tp->type == LP)
 			break;
-		if (trp->tp->type!=NL)
+		if (trp->tp->type != NL)
 			return ntok;
 	}
 	*narg = 0;
@@ -259,20 +258,20 @@ int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
 	trp->tp++;
 	/* search for the terminating ), possibly extending the row */
 	needspace = 0;
-	while (parens>0) {
+	while (parens > 0) {
 		if (trp->tp >= trp->lp)
 			gettokens(trp, 0);
 		if (needspace) {
 			needspace = 0;
 			makespace(trp);
 		}
-		if (trp->tp->type==END) {
+		if (trp->tp->type == END) {
 			trp->lp -= 1;
 			trp->tp -= ntok;
 			error(ERROR, "EOF in macro arglist");
 			return ntok;
 		}
-		if (trp->tp->type==NL) {
+		if (trp->tp->type == NL) {
 			trp->tp += 1;
 			adjustrow(trp, -1);
 			trp->tp -= 1;
@@ -280,32 +279,33 @@ int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
 			needspace = 1;
 			continue;
 		}
-		if (trp->tp->type==LP)
+		if (trp->tp->type == LP)
 			parens++;
-		else if (trp->tp->type==RP)
+		else if (trp->tp->type == RP)
 			parens--;
 		trp->tp++;
 		ntok++;
 	}
 	trp->tp -= ntok;
 	/* Now trp->tp won't move underneath us */
-	lp = bp = trp->tp+ntokp;
-	for (; parens>=0; lp++) {
+	lp = bp = trp->tp + ntokp;
+	for (; parens >= 0; lp++) {
 		if (lp->type == LP) {
 			parens++;
 			continue;
 		}
-		if (lp->type==RP)
+		if (lp->type == RP)
 			parens--;
-		if (lp->type==DSHARP)
-			lp->type = DSHARP1;	/* ## not special in arg */
-		if (lp->type==COMMA && parens==0 || parens<0 && (lp-1)->type!=LP) {
-			if (*narg>=NARG-1)
+		if (lp->type == DSHARP)
+			lp->type = DSHARP1; /* ## not special in arg */
+		if (lp->type == COMMA && parens == 0
+				|| parens < 0 && (lp - 1)->type != LP) {
+			if (*narg >= NARG - 1)
 				error(FATAL, "Sorry, too many macro arguments");
 			ttr.bp = ttr.tp = bp;
 			ttr.lp = lp;
 			atr[(*narg)++] = normtokenrow(&ttr);
-			bp = lp+1;
+			bp = lp + 1;
 		}
 	}
 	return ntok;
@@ -315,17 +315,16 @@ int gatherargs(Tokenrow *trp, Tokenrow **atr, int *narg)
  * substitute the argument list into the replacement string
  *  This would be simple except for ## and #
  */
-void substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr)
-{
+void substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr) {
 	Tokenrow tatr;
 	Token *tp;
 	int ntok, argno;
 
-	for (rtr->tp=rtr->bp; rtr->tp<rtr->lp; ) {
-		if (rtr->tp->type==SHARP) {	/* string operator */
+	for (rtr->tp = rtr->bp; rtr->tp < rtr->lp;) {
+		if (rtr->tp->type == SHARP) { /* string operator */
 			tp = rtr->tp;
 			rtr->tp += 1;
-			if ((argno = lookuparg(np, rtr->tp))<0) {
+			if ((argno = lookuparg(np, rtr->tp)) < 0) {
 				error(ERROR, "# not followed by macro parameter");
 				continue;
 			}
@@ -334,10 +333,9 @@ void substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr)
 			insertrow(rtr, ntok, stringify(atr[argno]));
 			continue;
 		}
-		if (rtr->tp->type==NAME
-		 && (argno = lookuparg(np, rtr->tp)) >= 0) {
-			if ((rtr->tp+1)->type==DSHARP
-			 || rtr->tp!=rtr->bp && (rtr->tp-1)->type==DSHARP)
+		if (rtr->tp->type == NAME && (argno = lookuparg(np, rtr->tp)) >= 0) {
+			if ((rtr->tp + 1)->type == DSHARP
+					|| rtr->tp != rtr->bp && (rtr->tp - 1)->type == DSHARP)
 				insertrow(rtr, 1, atr[argno]);
 			else {
 				copytokenrow(&tatr, atr[argno]);
@@ -354,37 +352,36 @@ void substargs(Nlist *np, Tokenrow *rtr, Tokenrow **atr)
 /*
  * Evaluate the ## operators in a tokenrow
  */
-void doconcat(Tokenrow *trp)
-{
+void doconcat(Tokenrow *trp) {
 	Token *ltp, *ntp;
 	Tokenrow ntr;
 	int len;
 
-	for (trp->tp=trp->bp; trp->tp<trp->lp; trp->tp++) {
-		if (trp->tp->type==DSHARP1)
+	for (trp->tp = trp->bp; trp->tp < trp->lp; trp->tp++) {
+		if (trp->tp->type == DSHARP1)
 			trp->tp->type = DSHARP;
-		else if (trp->tp->type==DSHARP) {
+		else if (trp->tp->type == DSHARP) {
 			char tt[128];
-			ltp = trp->tp-1;
-			ntp = trp->tp+1;
-			if (ltp<trp->bp || ntp>=trp->lp) {
+			ltp = trp->tp - 1;
+			ntp = trp->tp + 1;
+			if (ltp < trp->bp || ntp >= trp->lp) {
 				error(ERROR, "## occurs at border of replacement");
 				continue;
 			}
 			len = ltp->len + ntp->len;
-			strncpy((char*)tt, (char*)ltp->t, ltp->len);
-			strncpy((char*)tt+ltp->len, (char*)ntp->t, ntp->len);
+			strncpy((char*) tt, (char*) ltp->t, ltp->len);
+			strncpy((char*) tt + ltp->len, (char*) ntp->t, ntp->len);
 			tt[len] = '\0';
 			setsource("<##>", NULL, tt);
 			maketokenrow(3, &ntr);
 			gettokens(&ntr, 1);
 			unsetsource();
-			if (ntr.lp-ntr.bp!=2 || ntr.bp->type==UNCLASS)
+			if (ntr.lp - ntr.bp != 2 || ntr.bp->type == UNCLASS)
 				error(WARNING, "Bad token %r produced by ##", &ntr);
-			ntr.lp = ntr.bp+1;
+			ntr.lp = ntr.bp + 1;
 			trp->tp = ltp;
 			makespace(&ntr);
-			insertrow(trp, (ntp-ltp)+1, &ntr);
+			insertrow(trp, (ntp - ltp) + 1, &ntr);
 			dofree(ntr.bp);
 			trp->tp--;
 		}
@@ -396,14 +393,14 @@ void doconcat(Tokenrow *trp)
  * look it up in mac's arglist, and if found, return the
  * corresponding index in the argname array.  Return -1 if not found.
  */
-int lookuparg(Nlist *mac, Token *tp)
-{
+int lookuparg(Nlist *mac, Token *tp) {
 	Token *ap;
 
-	if (tp->type!=NAME || mac->ap==NULL)
+	if (tp->type != NAME || mac->ap == NULL)
 		return -1;
-	for (ap=mac->ap->bp; ap<mac->ap->lp; ap++) {
-		if (ap->len==tp->len && strncmp((char*)ap->t,(char*)tp->t,ap->len)==0)
+	for (ap = mac->ap->bp; ap < mac->ap->lp; ap++) {
+		if (ap->len == tp->len
+				&& strncmp((char*) ap->t, (char*) tp->t, ap->len) == 0)
 			return ap - mac->ap->bp;
 	}
 	return -1;
@@ -413,10 +410,9 @@ int lookuparg(Nlist *mac, Token *tp)
  * Return a quoted version of the tokenrow (from # arg)
  */
 #define	STRLEN	512
-Tokenrow * stringify(Tokenrow *vp)
-{
+Tokenrow * stringify(Tokenrow *vp) {
 	static Token t = { STRING };
-	static Tokenrow tr = { &t, &t, &t+1, 1 };
+	static Tokenrow tr = { &t, &t, &t + 1, 1 };
 	Token *tp;
 	uchar s[STRLEN];
 	uchar *sp = s, *cp;
@@ -424,15 +420,15 @@ Tokenrow * stringify(Tokenrow *vp)
 
 	*sp++ = '"';
 	for (tp = vp->bp; tp < vp->lp; tp++) {
-		instring = tp->type==STRING || tp->type==CCON;
-		if (sp+2*tp->len >= &s[STRLEN-10]) {
+		instring = tp->type == STRING || tp->type == CCON;
+		if (sp + 2 * tp->len >= &s[STRLEN - 10]) {
 			error(ERROR, "Stringified macro arg is too long");
 			break;
 		}
-		if (tp->wslen && (tp->flag&XPWS)==0)
+		if (tp->wslen && (tp->flag & XPWS) == 0)
 			*sp++ = ' ';
-		for (i=0, cp=tp->t; i<tp->len; i++) {	
-			if (instring && (*cp=='"' || *cp=='\\'))
+		for (i = 0, cp = tp->t; i < tp->len; i++) {
+			if (instring && (*cp == '"' || *cp == '\\'))
 				*sp++ = '\\';
 			*sp++ = *cp++;
 		}
@@ -440,7 +436,7 @@ Tokenrow * stringify(Tokenrow *vp)
 	*sp++ = '"';
 	*sp = '\0';
 	sp = s;
-	t.len = strlen((char*)sp);
+	t.len = strlen((char*) sp);
 	t.t = newstring(sp, t.len, 0);
 	return &tr;
 }
@@ -448,8 +444,7 @@ Tokenrow * stringify(Tokenrow *vp)
 /*
  * expand a builtin name
  */
-void builtin(Tokenrow *trp, int biname)
-{
+void builtin(Tokenrow *trp, int biname) {
 	char *op;
 	Token *tp;
 	Source *s;
@@ -458,9 +453,9 @@ void builtin(Tokenrow *trp, int biname)
 	trp->tp++;
 	/* need to find the real source */
 	s = cursource;
-	while (s && s->fd==NULL)
+	while (s && s->fd == NULL)
 		s = s->next;
-	if (s==NULL)
+	if (s == NULL)
 		s = cursource;
 	/* most are strings */
 	tp->type = STRING;
@@ -474,7 +469,7 @@ void builtin(Tokenrow *trp, int biname)
 
 	case KLINENO:
 		tp->type = NUMBER;
-		op = outnum(op-1, s->line);
+		op = outnum(op - 1, s->line);
 		break;
 
 	case KFILE: {
@@ -484,16 +479,16 @@ void builtin(Tokenrow *trp, int biname)
 				*op++ = '\\';
 		op--;
 		break;
-		}
+	}
 
 	case KDATE:
-		strncpy(op, curtime+4, 7);
-		strncpy(op+7, curtime+20, 4);
+		strncpy(op, curtime + 4, 7);
+		strncpy(op + 7, curtime + 20, 4);
 		op += 11;
 		break;
 
 	case KTIME:
-		strncpy(op, curtime+11, 8);
+		strncpy(op, curtime + 11, 8);
 		op += 8;
 		break;
 
@@ -501,9 +496,9 @@ void builtin(Tokenrow *trp, int biname)
 		error(ERROR, "cpp botch: unknown internal macro");
 		return;
 	}
-	if (tp->type==STRING)
+	if (tp->type == STRING)
 		*op++ = '"';
-	tp->t = (uchar*)outp;
+	tp->t = (uchar*) outp;
 	tp->len = op - outp;
 	outp = op;
 }

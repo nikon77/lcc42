@@ -2,7 +2,12 @@
 lcc是Christopher W.Fraser & David R.Hanson在《A Retargetable C Compiler: Design and Implementation》一书中介绍的编译器.
 该工程的目标是对这个源码树进行注释和分析,最终将lcc移植到Ubuntu15-amd64系统下.
 
-编译步骤：
+需要提前安装gcc 32位编译支持：
+
+sudo apt-get install gcc-multilib
+
+lcc-4.2编译步骤：
+
 1. ./config_on_ubuntu15-amd64.sh clean
 
 2. make all
