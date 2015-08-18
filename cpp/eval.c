@@ -96,7 +96,12 @@ struct	value tokval(Token *);
 struct value vals[NSTAK], *vp;
 enum toktype ops[NSTAK], *op;
 
-/*
+/**
+ * eval - 计算#if,#elif,#ifdef,#ifndef之后的表达式
+ * @trp: Token行
+ * @kw: 关键字对应的Enum值.（类型为enum kwtype）
+ * 返回值: TODO
+ * NOTE：trp->tp指向#if #elif #ifdef #ifndef关键字
  * Evaluate an #if #elif #ifdef #ifndef line.  trp->tp points to the keyword.
  */
 long eval(Tokenrow *trp, int kw) {
@@ -104,13 +109,13 @@ long eval(Tokenrow *trp, int kw) {
 	Nlist *np;
 	int ntok, rand;
 
-	trp->tp++;
-	if (kw==KIFDEF || kw==KIFNDEF) {
-		if (trp->lp - trp->bp != 4 || trp->tp->type!=NAME) {
-			error(ERROR, "Syntax error in #ifdef/#ifndef");
-			return 0;
+	trp->tp++; /* 移动到#if之后的Token */
+	if (kw==KIFDEF || kw==KIFNDEF) { /* 关键字如果为#ifdef或#ifndef */
+		if (trp->lp - trp->bp != 4 || trp->tp->type!=NAME) { /* 判断该行的语法正确性 */
+			error(ERROR, "Syntax error in #ifdef/#ifndef"); /* 若语法错误，则打印错误信息 */
+			return 0; /* 返回 */
 		}
-		np = lookup(trp->tp, 0);
+		np = lookup(trp->tp, 0); /* 查找该宏 */
 		return (kw==KIFDEF) == (np && np->flag&(ISDEFINED|ISMAC));
 	}
 	ntok = trp->tp - trp->bp;

@@ -15,7 +15,7 @@ int			nerrs;				/* 记录预处理中错误数 */
 struct	token nltoken = { NL, 0, 0, 0, 1, (uchar*)"\n" }; /* 换行符的token结构 */
 char	*curtime;			/* 当前时间的字串 */
 int		incdepth;			/* 头文件包含的深度,默认0 */
-int		ifdepth;			/* 条件编译语句的内嵌深度 */
+int		ifdepth;			/* 当前条件编译语句的嵌套深度 */
 int		ifsatisfied[NIF];	/* 条件编译深度数组，例如: ifsatisfied[4],表明深度为4的#if被满足了... */
 int		skipping;			/* TODO: 略过谁？*/
 
@@ -75,9 +75,9 @@ void process(Tokenrow *trp) {
 			control(trp); /* 处理预处理指令部分（宏定义，条件编译，头文件包含） */
 		} else if (!skipping && anymacros)
 			expandrow(trp, NULL);
-		if (skipping)
-			setempty(trp);
-		puttokens(trp);
+		if (skipping) /* 如果当前是忽略状态 */
+			setempty(trp); /* 置空当前行 */
+		puttokens(trp); /* 输出当前行 */
 		anymacros = 0;
 		cursource->line += cursource->lineinc;
 		if (cursource->lineinc>1) {
@@ -108,9 +108,9 @@ void control(Tokenrow *trp) {
 		error(WARNING, "Unknown preprocessor control %t", tp); /* 打印信息，无法识别的预处理控制指令 */
 		return; /* 该行处理完毕 */
 	}
-	if (skipping) {
-		if ((np->flag&ISKW)==0)
-			return;
+	if (skipping) { /* TODO: 啥是skipping? */
+		if ((np->flag&ISKW)==0) /* 如果np不是关键字 */
+			return; /* 函数返回 */
 		switch (np->val) {
 		case KENDIF:
 			if (--ifdepth<skipping)
@@ -148,7 +148,7 @@ void control(Tokenrow *trp) {
 			error(ERROR, "Syntax error in #undef"); /* 打印错误信息 */
 			break;
 		}
-		if ((np = lookup(tp, 0)) != NULL)
+		if ((np = lookup(tp, 0)) != NULL) /* 如果在hash表中找到了tp所指向的宏名 */
 			np->flag &= ~ISDEFINED; /* 清零ISDEFINED标志位 */
 		break;
 
@@ -158,10 +158,10 @@ void control(Tokenrow *trp) {
 	case KIFDEF: /* #ifdef */
 	case KIFNDEF: /* #ifndef */
 	case KIF: /* #if */
-		if (++ifdepth >= NIF) /*  */
-			error(FATAL, "#if too deeply nested"); /* 打印错误信息 `#if中嵌入太深' */
-		++cursource->ifdepth;
-		ifsatisfied[ifdepth] = 0;
+		if (++ifdepth >= NIF) /* 全局条件编译语句的嵌套深度值加1 */
+			error(FATAL, "#if too deeply nested"); /* 如果嵌套深度值大于NIF，则打印错误信息 `#if中嵌入太深' */
+		++cursource->ifdepth; /* 当前输入源的条件编译语句的嵌套深度值加1 */
+		ifsatisfied[ifdepth] = 0; /* 设定条件编译语句的嵌套深度值对应的if语句还未被满足 */
 		if (eval(trp, np->val))
 			ifsatisfied[ifdepth] = 1;
 		else
